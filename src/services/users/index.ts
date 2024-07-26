@@ -2,6 +2,7 @@ import { prisma } from '../../server';
 import bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
+import AuthService from '../auth';
 
 class UserService {
   public async getUsers() {
@@ -26,6 +27,21 @@ class UserService {
     } catch (error) {
       throw new Error('Failed to retrieve user by email');
     }
+  }
+
+  public async loginUser(email: string, password: string) {
+    const user = await this.findUserByEmail(email);
+    if (!user) {
+      throw new Error('Invalid email or password');
+  }
+
+    const isValid = await bcrypt.compare(password.toLowerCase(), user.password);
+    if (!isValid) {
+      throw new Error('Invalid email or password');
+    }
+
+    const token = AuthService.generateToken({ id: user.id, email: user.email, admin: user.admin });
+    return { token, user };
   }
 
   public async createUser(data: {

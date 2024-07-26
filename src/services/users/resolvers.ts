@@ -62,6 +62,7 @@ const resolvers = {
       const token = AuthService.generateToken({ id: user.id, email: user.email, admin: user.admin });
       return { token, user };
     },
+
     requestPasswordReset: async (_: unknown, args: { email: string }) => {
       try {
         return await UserService.requestPasswordReset(args.email);
