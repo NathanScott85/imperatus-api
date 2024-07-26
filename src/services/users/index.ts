@@ -83,6 +83,43 @@ class UserService {
     }
   }
 
+  public async updateUser(id: number, data: {
+    fullname?: string;
+    email?: string;
+    password?: string;
+    dob?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    postcode?: string;
+    admin?: boolean;
+  }) {
+    if (data.password) {
+      const lowercasePassword = data.password.toLowerCase();
+      data.password = await bcrypt.hash(lowercasePassword, 10);
+    }
+    if (data.dob) {
+      data.dob = new Date(data.dob).toISOString();
+    }
+
+    try {
+      return await prisma.user.update({
+        where: { id },
+        data,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002' &&
+        Array.isArray(error.meta?.target) &&
+        error.meta?.target.includes('email')
+      ) {
+        throw new Error('Email is already in use');
+      }
+      throw new Error('Failed to update user');
+    }
+  }
+
   public async requestPasswordReset(email: string) {
     try {
       const user = await this.findUserByEmail(email);

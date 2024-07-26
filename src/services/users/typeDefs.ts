@@ -1,4 +1,4 @@
-import { gql } from 'apollo-server';
+import { gql } from "apollo-server";
 
 const typeDefs = gql`
   type User {
@@ -23,6 +23,18 @@ const typeDefs = gql`
     message: String!
   }
 
+  input UpdateUserInput {
+    fullname: String
+    email: String
+    password: String
+    dob: String
+    phone: String
+    address: String
+    city: String
+    postcode: String
+    admin: Boolean
+  }
+
   type Query {
     users: [User!]!
     user(id: Int!): User
@@ -43,6 +55,10 @@ const typeDefs = gql`
     loginUser(email: String!, password: String!): AuthPayload!
     requestPasswordReset(email: String!): Message!
     resetPassword(token: String!, newPassword: String!): Message!
+    updateUser(id: Int!, data: UpdateUserInput!): User!
+    sendVerificationEmail(userId: Int!): Message!
+    verifyEmail(token: String!): Message!
+    deleteUser(id: Int!): Message!
   }
 `;
 

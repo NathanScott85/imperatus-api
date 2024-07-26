@@ -48,6 +48,17 @@ const resolvers = {
         throw new Error('Oops! Something went wrong!');
       }
     },
+  
+    updateUser: async (_: unknown, args: { id: number; data: any }, { user }: any) => {
+      if (!user) throw new AuthenticationError('You must be logged in');
+      if (user.id !== args.id && !user.admin) throw new AuthenticationError('You do not have permission to update this user');
+      try {
+        return await UserService.updateUser(args.id, args.data);
+      } catch (error) {
+        throw new Error('Failed to update user');
+      }
+    },
+
     loginUser: async (_: unknown, args: { email: string; password: string }) => {
       const user = await UserService.findUserByEmail(args.email);
       if (!user) {
@@ -73,6 +84,7 @@ const resolvers = {
         throw new Error('Oops! Something went wrong!');
       }
     },
+
     resetPassword: async (_: unknown, args: { token: string, newPassword: string }) => {
       try {
         return await UserService.resetPassword(args.token, args.newPassword);
