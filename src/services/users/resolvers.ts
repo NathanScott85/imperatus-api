@@ -95,6 +95,16 @@ const resolvers = {
         throw new Error('Oops! Something went wrong!');
       }
     },
+
+    refreshToken: async (_: unknown, args: { token: string }) => {
+      try {
+        const newToken = AuthService.refreshToken(args.token);
+        return { token: newToken };
+      } catch (error) {
+        throw new AuthenticationError('Invalid token');
+      }
+    },
+
   },
 };
 

@@ -59,6 +59,7 @@ const typeDefs = gql`
     sendVerificationEmail(userId: Int!): Message!
     verifyEmail(token: String!): Message!
     deleteUser(id: Int!): Message!
+    refreshToken(token: String!): AuthPayload!
   }
 `;
 
