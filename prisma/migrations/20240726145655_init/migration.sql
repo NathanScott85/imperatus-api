@@ -5,7 +5,7 @@ CREATE TABLE "User" (
     "fullname" TEXT NOT NULL,
     "password" TEXT NOT NULL,
     "dob" DATETIME NOT NULL,
-    "phone" INTEGER NOT NULL,
+    "phone" TEXT NOT NULL,
     "address" TEXT NOT NULL,
     "city" TEXT NOT NULL,
     "postcode" TEXT NOT NULL,

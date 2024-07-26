@@ -47,7 +47,7 @@ class UserService {
       password: hashedPassword,
       email: data.email.toLowerCase(),
       dob: new Date(data.dob).toISOString(),
-      phone: parseInt(data.phone),
+      phone: data.phone,
     };
 
     try {
