@@ -1,0 +1,49 @@
+import { gql } from 'apollo-server';
+
+const typeDefs = gql`
+  type User {
+    id: Int!
+    fullname: String!
+    email: String!
+    password: String!
+    dob: String!
+    phone: String!
+    address: String!
+    city: String!
+    postcode: String!
+    admin: Boolean!
+  }
+
+  type AuthPayload {
+    token: String!
+    user: User!
+  }
+
+  type Message {
+    message: String!
+  }
+
+  type Query {
+    users: [User!]!
+    user(id: Int!): User
+  }
+
+  type Mutation {
+    createUser(
+      fullname: String!
+      email: String!
+      password: String!
+      dob: String!
+      phone: String!
+      address: String!
+      city: String!
+      postcode: String!
+      admin: Boolean!
+    ): User!
+    loginUser(email: String!, password: String!): AuthPayload!
+    requestPasswordReset(email: String!): Message!
+    resetPassword(token: String!, newPassword: String!): Message!
+  }
+`;
+
+export default typeDefs;
