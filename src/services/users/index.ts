@@ -1,15 +1,15 @@
-import { prisma } from '../../server';
-import bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
-import { v4 as uuidv4 } from 'uuid';
-import AuthService from '../auth';
+import { prisma } from "../../server";
+import bcrypt from "bcrypt";
+import { Prisma } from "@prisma/client";
+import { v4 as uuidv4 } from "uuid";
+import AuthService from "../auth";
 
 class UserService {
   public async getUsers() {
     try {
       return await prisma.user.findMany();
     } catch (error) {
-      throw new Error('Failed to retrieve users');
+      throw new Error("Failed to retrieve users");
     }
   }
 
@@ -17,7 +17,7 @@ class UserService {
     try {
       return await prisma.user.findUnique({ where: { id } });
     } catch (error) {
-      throw new Error('Failed to retrieve user by ID');
+      throw new Error("Failed to retrieve user by ID");
     }
   }
 
@@ -25,22 +25,26 @@ class UserService {
     try {
       return await prisma.user.findUnique({ where: { email } });
     } catch (error) {
-      throw new Error('Failed to retrieve user by email');
+      throw new Error("Failed to retrieve user by email");
     }
   }
 
   public async loginUser(email: string, password: string) {
     const user = await this.findUserByEmail(email);
     if (!user) {
-      throw new Error('Invalid email or password');
-  }
+      throw new Error("Invalid email or password");
+    }
 
     const isValid = await bcrypt.compare(password.toLowerCase(), user.password);
     if (!isValid) {
-      throw new Error('Invalid email or password');
+      throw new Error("Invalid email or password");
     }
 
-    const token = AuthService.generateToken({ id: user.id, email: user.email, admin: user.admin });
+    const token = AuthService.generateToken({
+      id: user.id,
+      email: user.email,
+      admin: user.admin,
+    });
     return { token, user };
   }
 
@@ -73,37 +77,39 @@ class UserService {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002' &&
+        error.code === "P2002" &&
         Array.isArray(error.meta?.target) &&
-        error.meta?.target.includes('email')
+        error.meta?.target.includes("email")
       ) {
-        throw new Error('Email is already in use');
+        throw new Error("Email is already in use");
       }
-      throw new Error('Failed to create user');
+      throw new Error("Failed to create user");
     }
   }
 
   public async deleteUser(id: number) {
     try {
       await prisma.user.delete({ where: { id } });
-      return { message: 'User account deleted successfully' };
+      return { message: "User account deleted successfully" };
     } catch (error) {
-      throw new Error('Failed to delete user account');
+      throw new Error("Failed to delete user account");
     }
   }
 
-
-  public async updateUser(id: number, data: {
-    fullname?: string;
-    email?: string;
-    password?: string;
-    dob?: string;
-    phone?: string;
-    address?: string;
-    city?: string;
-    postcode?: string;
-    admin?: boolean;
-  }) {
+  public async updateUser(
+    id: number,
+    data: {
+      fullname?: string;
+      email?: string;
+      password?: string;
+      dob?: string;
+      phone?: string;
+      address?: string;
+      city?: string;
+      postcode?: string;
+      admin?: boolean;
+    }
+  ) {
     if (data.password) {
       const lowercasePassword = data.password.toLowerCase();
       data.password = await bcrypt.hash(lowercasePassword, 10);
@@ -120,13 +126,43 @@ class UserService {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002' &&
+        error.code === "P2002" &&
         Array.isArray(error.meta?.target) &&
-        error.meta?.target.includes('email')
+        error.meta?.target.includes("email")
       ) {
-        throw new Error('Email is already in use');
+        throw new Error("Email is already in use");
       }
-      throw new Error('Failed to update user');
+      throw new Error("Failed to update user");
+    }
+  }
+
+  public async verifyEmail(token: string) {
+    try {
+      const user = await prisma.user.findFirst({
+        where: {
+          verificationToken: token,
+          verificationTokenExpiry: {
+            gte: new Date(),
+          },
+        },
+      });
+
+      if (!user) {
+        throw new Error("Invalid or expired verification token");
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          verificationToken: null,
+          verificationTokenExpiry: null,
+          emailVerified: true,
+        },
+      });
+
+      return { message: "Email successfully verified" };
+    } catch (error) {
+      throw new Error("Failed to verify email");
     }
   }
 
@@ -134,7 +170,7 @@ class UserService {
     try {
       const user = await this.findUserByEmail(email);
       if (!user) {
-        throw new Error('User with this email does not exist');
+        throw new Error("User with this email does not exist");
       }
 
       const resetToken = uuidv4();
@@ -144,13 +180,12 @@ class UserService {
         where: { email },
         data: { resetToken, resetTokenExpiry },
       });
-    
+
       //TODO: implement functionality send email to the user with the resetToken
 
-      return { message: 'Password reset token sent to email' };
+      return { message: "Password reset token sent to email" };
     } catch (error) {
-    
-      throw new Error('Failed to request password reset');
+      throw new Error("Failed to request password reset");
     }
   }
 
@@ -166,7 +201,7 @@ class UserService {
       });
 
       if (!user) {
-        throw new Error('Invalid or expired reset token');
+        throw new Error("Invalid or expired reset token");
       }
 
       const hashedPassword = await bcrypt.hash(newPassword.toLowerCase(), 10);
@@ -180,9 +215,9 @@ class UserService {
         },
       });
 
-      return { message: 'Password successfully reset' };
+      return { message: "Password successfully reset" };
     } catch (error) {
-      throw new Error('Failed to reset password');
+      throw new Error("Failed to reset password");
     }
   }
 }

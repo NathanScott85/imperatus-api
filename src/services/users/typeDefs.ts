@@ -12,6 +12,7 @@ const typeDefs = gql`
     city: String!
     postcode: String!
     admin: Boolean!
+    emailVerified: Boolean
   }
 
   type AuthPayload {
@@ -62,6 +63,7 @@ const typeDefs = gql`
     deleteUser(id: Int!): Message!
     refreshToken(token: String!): AuthPayload!
     updateUserRole(id: Int!, admin: Boolean!): User!
+    logoutUser: Message!
   }
 `;
 

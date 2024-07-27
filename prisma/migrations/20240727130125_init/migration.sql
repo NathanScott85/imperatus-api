@@ -10,8 +10,11 @@ CREATE TABLE "User" (
     "city" TEXT NOT NULL,
     "postcode" TEXT NOT NULL,
     "admin" BOOLEAN NOT NULL DEFAULT false,
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
     "resetToken" TEXT,
-    "resetTokenExpiry" DATETIME
+    "resetTokenExpiry" DATETIME,
+    "verificationToken" TEXT,
+    "verificationTokenExpiry" DATETIME
 );
 
 -- CreateIndex

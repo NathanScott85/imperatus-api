@@ -8,16 +8,19 @@ generator client {
 }
 
 model User {
-  id               Int       @id @default(autoincrement())
-  email            String    @unique
-  fullname         String
-  password         String
-  dob              DateTime
-  phone            String
-  address          String
-  city             String
-  postcode         String
-  admin            Boolean   @default(false)
-  resetToken       String?   
-  resetTokenExpiry DateTime? 
+  id                   Int       @id @default(autoincrement())
+  email                String    @unique
+  fullname             String
+  password             String
+  dob                  DateTime
+  phone                String
+  address              String
+  city                 String
+  postcode             String
+  admin                Boolean   @default(false)
+  emailVerified        Boolean   @default(false)
+  resetToken           String?   
+  resetTokenExpiry     DateTime? 
+  verificationToken    String?   // Add this line
+  verificationTokenExpiry DateTime? // Add this line
 }
