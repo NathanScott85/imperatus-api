@@ -158,6 +158,7 @@ class UserService {
       const transporter = nodemailer.createTransport({
         service: process.env.EMAIL_SERVICE,
         host: process.env.EMAIL_HOST,
+        port: Number(process.env.EMAIL_PORT),
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASS,
@@ -218,14 +219,32 @@ class UserService {
       }
 
       const resetToken = uuidv4();
-      const resetTokenExpiry = new Date(Date.now() + 3600000);
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
       await prisma.user.update({
         where: { email },
         data: { resetToken, resetTokenExpiry },
       });
 
-      //TODO: implement functionality send email to the user with the resetToken
+      const transporter = nodemailer.createTransport({
+        service: process.env.EMAIL_SERVICE,
+        host: process.env.EMAIL_HOST,
+        port: Number(process.env.EMAIL_PORT),
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: "Password Reset",
+        text: `Please reset your password by using the following token: ${resetToken}`,
+        html: `<p>Please reset your password by using the following token: <strong>${resetToken}</strong></p>`,
+      };
+
+      await transporter.sendMail(mailOptions);
 
       return { message: "Password reset token sent to email" };
     } catch (error) {
