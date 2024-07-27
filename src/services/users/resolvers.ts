@@ -109,6 +109,19 @@ const resolvers = {
       return { token, user };
     },
 
+    sendVerificationEmail: async (
+      _: unknown,
+      args: { userId: number },
+      { user }: any
+    ) => {
+      if (!user || (user.id !== args.userId && !user.admin)) {
+        throw new AuthenticationError(
+          "You do not have permission to send verification email to this user"
+        );
+      }
+      return await UserService.sendVerificationEmail(args.userId);
+    },
+
     verifyEmail: async (_: unknown, args: { token: string }) => {
       try {
         return await UserService.verifyEmail(args.token);

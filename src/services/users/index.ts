@@ -1,7 +1,9 @@
-import { prisma } from "../../server";
-import bcrypt from "bcrypt";
 import { Prisma } from "@prisma/client";
+import nodemailer from "nodemailer";
+import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
+import { prisma } from "../../server";
+
 import AuthService from "../auth";
 
 class UserService {
@@ -133,6 +135,48 @@ class UserService {
         throw new Error("Email is already in use");
       }
       throw new Error("Failed to update user");
+    }
+  }
+
+  public async sendVerificationEmail(userId: number) {
+    try {
+      const user = await this.getUserById(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const verificationToken = uuidv4();
+      const verificationTokenExpiry = new Date(
+        Date.now() + 24 * 60 * 60 * 1000
+      ); // 24 hours
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { verificationToken, verificationTokenExpiry },
+      });
+
+      const transporter = nodemailer.createTransport({
+        service: process.env.EMAIL_SERVICE,
+        host: process.env.EMAIL_HOST,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: user.email,
+        subject: "Email Verification",
+        text: `Please verify your email by using the following token: ${verificationToken}`,
+        html: `<p>Please verify your email by using the following token: <strong>${verificationToken}</strong></p>`,
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      return { message: "Verification email sent" };
+    } catch (error) {
+      throw new Error("Failed to send verification email");
     }
   }
 
