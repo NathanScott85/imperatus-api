@@ -21,6 +21,6 @@ model User {
   emailVerified        Boolean   @default(false)
   resetToken           String?   
   resetTokenExpiry     DateTime? 
-  verificationToken    String?   // Add this line
-  verificationTokenExpiry DateTime? // Add this line
+  verificationToken    String?   
+  verificationTokenExpiry DateTime?
 }

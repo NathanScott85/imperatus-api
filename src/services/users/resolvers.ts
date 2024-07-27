@@ -84,6 +84,12 @@ const resolvers = {
       }
     },
 
+    logoutUser: async (_: unknown, __: unknown, { user }: any) => {
+      if (!user) throw new AuthenticationError("You must be logged in");
+      // Since we're using stateless JWTs, "logging out" means the client should remove the token
+      return { message: "Logout successful" };
+    },
+
     loginUser: async (
       _: unknown,
       args: { email: string; password: string }

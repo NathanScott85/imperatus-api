@@ -13,6 +13,8 @@ const typeDefs = gql`
     postcode: String!
     admin: Boolean!
     emailVerified: Boolean
+    verificationToken: String
+    verificationTokenExpiry: String
   }
 
   type AuthPayload {
