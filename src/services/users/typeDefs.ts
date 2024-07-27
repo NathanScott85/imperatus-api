@@ -38,6 +38,7 @@ const typeDefs = gql`
   type Query {
     users: [User!]!
     user(id: Int!): User
+    getCurrentUser: User
   }
 
   type Mutation {
@@ -60,6 +61,7 @@ const typeDefs = gql`
     verifyEmail(token: String!): Message!
     deleteUser(id: Int!): Message!
     refreshToken(token: String!): AuthPayload!
+    updateUserRole(id: Int!, admin: Boolean!): User!
   }
 `;
 

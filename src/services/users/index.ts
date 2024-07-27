@@ -83,6 +83,16 @@ class UserService {
     }
   }
 
+  public async deleteUser(id: number) {
+    try {
+      await prisma.user.delete({ where: { id } });
+      return { message: 'User account deleted successfully' };
+    } catch (error) {
+      throw new Error('Failed to delete user account');
+    }
+  }
+
+
   public async updateUser(id: number, data: {
     fullname?: string;
     email?: string;

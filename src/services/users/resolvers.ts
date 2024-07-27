@@ -48,6 +48,12 @@ const resolvers = {
         throw new Error('Oops! Something went wrong!');
       }
     },
+
+    deleteUser: async (_: unknown, { id }: { id: number }, { user }: any) => {
+      if (!user) throw new AuthenticationError('You must be logged in');
+      if (user.id !== id && !user.admin) throw new AuthenticationError('You do not have permission to delete this user');
+      return await UserService.deleteUser(id);
+    },
   
     updateUser: async (_: unknown, args: { id: number; data: any }, { user }: any) => {
       if (!user) throw new AuthenticationError('You must be logged in');
