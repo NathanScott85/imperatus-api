@@ -30,7 +30,7 @@ const resolvers = {
         address: string;
         city: string;
         postcode: string;
-        admin: boolean;
+        roles: string[];
       }
     ) => {
       try {
@@ -43,7 +43,7 @@ const resolvers = {
           address: args.address,
           city: args.city,
           postcode: args.postcode,
-          admin: args.admin,
+          roles: args.roles,
         });
 
         return user;
@@ -65,6 +65,18 @@ const resolvers = {
           "You do not have permission to delete this user"
         );
       return await UserService.deleteUser(id);
+    },
+
+    updateUserRoles: async (
+      _: unknown,
+      args: { userId: number; roles: string[] },
+      { user }: any
+    ) => {
+      if (!user || !user.admin)
+        throw new AuthenticationError(
+          "You do not have permission to update roles"
+        );
+      return await UserService.updateUserRoles(args.userId, args.roles);
     },
 
     updateUser: async (

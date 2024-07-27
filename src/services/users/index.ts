@@ -9,7 +9,15 @@ import AuthService from "../auth";
 class UserService {
   public async getUsers() {
     try {
-      return await prisma.user.findMany();
+      return await prisma.user.findMany({
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
     } catch (error) {
       throw new Error("Failed to retrieve users");
     }
@@ -17,7 +25,16 @@ class UserService {
 
   public async getUserById(id: number) {
     try {
-      return await prisma.user.findUnique({ where: { id } });
+      return await prisma.user.findUnique({
+        where: { id },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
     } catch (error) {
       throw new Error("Failed to retrieve user by ID");
     }
@@ -25,7 +42,16 @@ class UserService {
 
   public async findUserByEmail(email: string) {
     try {
-      return await prisma.user.findUnique({ where: { email } });
+      return await prisma.user.findUnique({
+        where: { email },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
     } catch (error) {
       throw new Error("Failed to retrieve user by email");
     }
@@ -59,7 +85,7 @@ class UserService {
     address: string;
     city: string;
     postcode: string;
-    admin: boolean;
+    roles: string[];
   }) {
     const lowercasePassword = data.password.toLowerCase();
     const hashedPassword = await bcrypt.hash(lowercasePassword, 10);
@@ -73,9 +99,27 @@ class UserService {
     };
 
     try {
-      return await prisma.user.create({
-        data: formattedData,
+      const user = await prisma.user.create({
+        data: {
+          ...formattedData,
+          roles: {
+            create: data.roles.map((role) => ({
+              role: {
+                connect: { name: role },
+              },
+            })),
+          },
+        },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
       });
+
+      return user;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -95,6 +139,40 @@ class UserService {
       return { message: "User account deleted successfully" };
     } catch (error) {
       throw new Error("Failed to delete user account");
+    }
+  }
+
+  public async updateUserRoles(userId: number, roles: string[]) {
+    try {
+      // Remove existing roles
+      await prisma.userRole.deleteMany({
+        where: { userId },
+      });
+
+      // Add new roles
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          roles: {
+            create: roles.map((role) => ({
+              role: {
+                connect: { name: role },
+              },
+            })),
+          },
+        },
+        include: {
+          roles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+      });
+
+      return updatedUser;
+    } catch (error) {
+      throw new Error("Failed to update user roles");
     }
   }
 

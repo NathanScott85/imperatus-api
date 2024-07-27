@@ -15,6 +15,18 @@ const typeDefs = gql`
     emailVerified: Boolean
     verificationToken: String
     verificationTokenExpiry: String
+    roles: [Role!]!
+  }
+
+  type Role {
+    id: Int!
+    name: String!
+  }
+
+  type UserRole {
+    id: Int!
+    user: User!
+    role: Role!
   }
 
   type AuthPayload {
@@ -54,11 +66,12 @@ const typeDefs = gql`
       address: String!
       city: String!
       postcode: String!
-      admin: Boolean!
+      roles: [String!]!
     ): User!
     loginUser(email: String!, password: String!): AuthPayload!
     requestPasswordReset(email: String!): Message!
     resetPassword(token: String!, newPassword: String!): Message!
+    updateUserRoles(userId: Int!, roles: [String!]!): User!
     updateUser(id: Int!, data: UpdateUserInput!): User!
     sendVerificationEmail(userId: Int!): Message!
     verifyEmail(token: String!): Message!
