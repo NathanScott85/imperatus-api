@@ -8,9 +8,6 @@ class AuthenticationService {
     email: string,
     password: string
   ): Promise<{ token: string; user: any }> {
-    console.log("Starting login process...");
-    console.log("Email:", email);
-
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -27,15 +24,10 @@ class AuthenticationService {
       throw new Error("User not found");
     }
 
-    console.log("User found:", user);
-
     const isValid = await SecurityService.comparePassword(
       password,
       user.password
     );
-    console.log("Password from user input:", password);
-    console.log("Hashed password from DB:", user.password);
-    console.log("Password match result:", isValid);
 
     if (!isValid) {
       console.error("Password does not match.");

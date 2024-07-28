@@ -66,10 +66,7 @@ class UserService {
     postcode: string;
     roles?: string[];
   }) {
-    const lowercasePassword = data.password.toLowerCase();
-    const hashedPassword = await SecurityService.hashPassword(
-      lowercasePassword
-    );
+    const hashedPassword = await SecurityService.hashPassword(data.password);
 
     const formattedData = {
       ...data,
@@ -136,12 +133,14 @@ class UserService {
       }
 
       await prisma.userRole.deleteMany({ where: { userId: id } });
-
       await prisma.user.delete({ where: { id } });
 
       return { message: "User account deleted successfully" };
     } catch (error) {
       console.error("Error deleting user:", error);
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
       throw new Error("Failed to delete user account");
     }
   }
@@ -193,8 +192,7 @@ class UserService {
     }
   ) {
     if (data.password) {
-      const lowercasePassword = data.password.toLowerCase();
-      data.password = await SecurityService.hashPassword(lowercasePassword);
+      data.password = await SecurityService.hashPassword(data.password);
     }
     if (data.dob) {
       data.dob = new Date(data.dob).toISOString();
@@ -254,7 +252,7 @@ class UserService {
 
   public async sendVerificationEmail(userId: number) {
     try {
-      const user = await this.getUserById(userId);
+      const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) {
         throw new Error("User not found");
       }
@@ -282,7 +280,10 @@ class UserService {
       });
 
       return { message: "Verification email sent" };
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === "User not found") {
+        throw error;
+      }
       throw new Error("Failed to send verification email");
     }
   }
@@ -312,7 +313,10 @@ class UserService {
       });
 
       return { message: "Email successfully verified" };
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === "Invalid or expired verification token") {
+        throw error; // Propagate the specific error
+      }
       throw new Error("Failed to verify email");
     }
   }

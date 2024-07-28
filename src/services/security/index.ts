@@ -10,7 +10,7 @@ class SecurityService {
     password: string,
     hash: string
   ): Promise<boolean> {
-    return await bcrypt.compare(password.toLowerCase(), hash);
+    return await bcrypt.compare(password, hash);
   }
 }
 
