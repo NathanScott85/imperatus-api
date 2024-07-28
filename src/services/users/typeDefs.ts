@@ -11,7 +11,6 @@ const typeDefs = gql`
     address: String!
     city: String!
     postcode: String!
-    admin: Boolean!
     emailVerified: Boolean
     verificationToken: String
     verificationTokenExpiry: String
@@ -66,7 +65,7 @@ const typeDefs = gql`
       address: String!
       city: String!
       postcode: String!
-      roles: [String!]!
+      roles: [String!]
     ): User!
     loginUser(email: String!, password: String!): AuthPayload!
     requestPasswordReset(email: String!): Message!

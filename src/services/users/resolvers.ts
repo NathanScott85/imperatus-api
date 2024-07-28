@@ -1,13 +1,14 @@
 import { AuthenticationError, UserInputError } from "apollo-server";
 import UserService from ".";
-import AuthService from "../auth";
-import bcrypt from "bcrypt";
+import AuthenticationService from "../authentication";
+import AutherisationTokenService from "../token";
+import SecurityService from "../security";
 
 const resolvers = {
   Query: {
     users: async (_: unknown, __: unknown, { user }: any) => {
       if (!user) throw new AuthenticationError("You must be logged in");
-      if (!user.admin)
+      if (!user.roles.includes("ADMIN"))
         throw new AuthenticationError(
           "You do not have permission to view this resource"
         );
@@ -46,7 +47,10 @@ const resolvers = {
           roles: args.roles,
         });
 
-        return user;
+        return {
+          ...user,
+          roles: user.roles.map((role: any) => role.role),
+        };
       } catch (error) {
         if (
           error instanceof Error &&
@@ -60,7 +64,11 @@ const resolvers = {
 
     deleteUser: async (_: unknown, { id }: { id: number }, { user }: any) => {
       if (!user) throw new AuthenticationError("You must be logged in");
-      if (user.id !== id && !user.admin)
+      if (
+        user.id !== id &&
+        !user.roles.includes("ADMIN") &&
+        !user.roles.includes("OWNER")
+      )
         throw new AuthenticationError(
           "You do not have permission to delete this user"
         );
@@ -72,7 +80,7 @@ const resolvers = {
       args: { userId: number; roles: string[] },
       { user }: any
     ) => {
-      if (!user || !user.admin)
+      if (!user || !user.roles.includes("ADMIN"))
         throw new AuthenticationError(
           "You do not have permission to update roles"
         );
@@ -85,7 +93,7 @@ const resolvers = {
       { user }: any
     ) => {
       if (!user) throw new AuthenticationError("You must be logged in");
-      if (user.id !== args.id && !user.admin)
+      if (user.id !== args.id && !user.roles.includes("ADMIN"))
         throw new AuthenticationError(
           "You do not have permission to update this user"
         );
@@ -105,25 +113,19 @@ const resolvers = {
       _: unknown,
       args: { email: string; password: string }
     ) => {
-      const user = await UserService.findUserByEmail(args.email);
-      if (!user) {
-        throw new AuthenticationError("Invalid email or password");
-      }
+      try {
+        const { token, user } = await AuthenticationService.loginUser(
+          args.email,
+          args.password
+        );
 
-      const isValid = await bcrypt.compare(
-        args.password.toLowerCase(),
-        user.password
-      );
-      if (!isValid) {
-        throw new AuthenticationError("Invalid email or password");
+        return { token, user };
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("Invalid")) {
+          throw new AuthenticationError(error.message);
+        }
+        throw new Error("Oops! Something went wrong!");
       }
-
-      const token = AuthService.generateToken({
-        id: user.id,
-        email: user.email,
-        admin: user.admin,
-      });
-      return { token, user };
     },
 
     sendVerificationEmail: async (
@@ -131,7 +133,7 @@ const resolvers = {
       args: { userId: number },
       { user }: any
     ) => {
-      if (!user || (user.id !== args.userId && !user.admin)) {
+      if (!user || (user.id !== args.userId && !user.roles.includes("ADMIN"))) {
         throw new AuthenticationError(
           "You do not have permission to send verification email to this user"
         );
@@ -152,7 +154,7 @@ const resolvers = {
 
     requestPasswordReset: async (_: unknown, args: { email: string }) => {
       try {
-        return await UserService.requestPasswordReset(args.email);
+        return await AuthenticationService.requestPasswordReset(args.email);
       } catch (error) {
         if (error instanceof Error) {
           throw new UserInputError(error.message);
@@ -166,7 +168,10 @@ const resolvers = {
       args: { token: string; newPassword: string }
     ) => {
       try {
-        return await UserService.resetPassword(args.token, args.newPassword);
+        return await AuthenticationService.resetPassword(
+          args.token,
+          args.newPassword
+        );
       } catch (error) {
         if (error instanceof Error) {
           throw new UserInputError(error.message);
@@ -177,7 +182,7 @@ const resolvers = {
 
     refreshToken: async (_: unknown, args: { token: string }) => {
       try {
-        const newToken = AuthService.refreshToken(args.token);
+        const newToken = AutherisationTokenService.refreshToken(args.token);
         return { token: newToken };
       } catch (error) {
         throw new AuthenticationError("Invalid token");

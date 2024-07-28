@@ -9,7 +9,6 @@ CREATE TABLE "User" (
     "address" TEXT NOT NULL,
     "city" TEXT NOT NULL,
     "postcode" TEXT NOT NULL,
-    "admin" BOOLEAN NOT NULL DEFAULT false,
     "resetToken" TEXT,
     "resetTokenExpiry" DATETIME,
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,

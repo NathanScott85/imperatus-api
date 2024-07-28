@@ -1,10 +1,8 @@
 import { Prisma } from "@prisma/client";
-import nodemailer from "nodemailer";
-import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../../server";
-
-import AuthService from "../auth";
+import SecurityService from "../security";
+import EmailService from "../email";
 
 class UserService {
   public async getUsers() {
@@ -57,25 +55,6 @@ class UserService {
     }
   }
 
-  public async loginUser(email: string, password: string) {
-    const user = await this.findUserByEmail(email);
-    if (!user) {
-      throw new Error("Invalid email or password");
-    }
-
-    const isValid = await bcrypt.compare(password.toLowerCase(), user.password);
-    if (!isValid) {
-      throw new Error("Invalid email or password");
-    }
-
-    const token = AuthService.generateToken({
-      id: user.id,
-      email: user.email,
-      admin: user.admin,
-    });
-    return { token, user };
-  }
-
   public async createUser(data: {
     fullname: string;
     email: string;
@@ -85,10 +64,12 @@ class UserService {
     address: string;
     city: string;
     postcode: string;
-    roles: string[];
+    roles?: string[];
   }) {
     const lowercasePassword = data.password.toLowerCase();
-    const hashedPassword = await bcrypt.hash(lowercasePassword, 10);
+    const hashedPassword = await SecurityService.hashPassword(
+      lowercasePassword
+    );
 
     const formattedData = {
       ...data,
@@ -98,14 +79,29 @@ class UserService {
       phone: data.phone,
     };
 
+    // Fetch the role(s) from the database
+    const roles = data.roles?.length
+      ? await prisma.role.findMany({
+          where: {
+            name: {
+              in: data.roles,
+            },
+          },
+        })
+      : await prisma.role.findMany({
+          where: {
+            name: "USER",
+          },
+        });
+
     try {
       const user = await prisma.user.create({
         data: {
           ...formattedData,
           roles: {
-            create: data.roles.map((role) => ({
+            create: roles.map((role) => ({
               role: {
-                connect: { name: role },
+                connect: { id: role.id },
               },
             })),
           },
@@ -132,24 +128,30 @@ class UserService {
       throw new Error("Failed to create user");
     }
   }
-
   public async deleteUser(id: number) {
     try {
+      const user = await prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        throw new Error(`User with ID ${id} does not exist`);
+      }
+
+      await prisma.userRole.deleteMany({ where: { userId: id } });
+
       await prisma.user.delete({ where: { id } });
+
       return { message: "User account deleted successfully" };
     } catch (error) {
+      console.error("Error deleting user:", error);
       throw new Error("Failed to delete user account");
     }
   }
 
   public async updateUserRoles(userId: number, roles: string[]) {
     try {
-      // Remove existing roles
       await prisma.userRole.deleteMany({
         where: { userId },
       });
 
-      // Add new roles
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
@@ -187,22 +189,56 @@ class UserService {
       address?: string;
       city?: string;
       postcode?: string;
-      admin?: boolean;
+      roles?: string[];
     }
   ) {
     if (data.password) {
       const lowercasePassword = data.password.toLowerCase();
-      data.password = await bcrypt.hash(lowercasePassword, 10);
+      data.password = await SecurityService.hashPassword(lowercasePassword);
     }
     if (data.dob) {
       data.dob = new Date(data.dob).toISOString();
     }
 
     try {
-      return await prisma.user.update({
+      // Update user details
+      const updatedUser = await prisma.user.update({
         where: { id },
-        data,
+        data: {
+          fullname: data.fullname,
+          email: data.email,
+          password: data.password,
+          dob: data.dob,
+          phone: data.phone,
+          address: data.address,
+          city: data.city,
+          postcode: data.postcode,
+        },
       });
+
+      // Update roles if provided
+      if (data.roles) {
+        // Remove existing roles
+        await prisma.userRole.deleteMany({
+          where: { userId: id },
+        });
+
+        // Add new roles
+        await prisma.user.update({
+          where: { id },
+          data: {
+            roles: {
+              create: data.roles.map((role) => ({
+                role: {
+                  connect: { name: role },
+                },
+              })),
+            },
+          },
+        });
+      }
+
+      return updatedUser;
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -233,25 +269,17 @@ class UserService {
         data: { verificationToken, verificationTokenExpiry },
       });
 
-      const transporter = nodemailer.createTransport({
-        service: process.env.EMAIL_SERVICE,
-        host: process.env.EMAIL_HOST,
-        port: Number(process.env.EMAIL_PORT),
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
+      const subject = "Email Verification";
+      const text = `Please verify your email by using the following token: ${verificationToken}`;
+      const html = `<p>Please verify your email by using the following token: <strong>${verificationToken}</strong></p>`;
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
+      await EmailService.sendMail({
+        from: process.env.EMAIL_USER!,
         to: user.email,
-        subject: "Email Verification",
-        text: `Please verify your email by using the following token: ${verificationToken}`,
-        html: `<p>Please verify your email by using the following token: <strong>${verificationToken}</strong></p>`,
-      };
-
-      await transporter.sendMail(mailOptions);
+        subject,
+        text,
+        html,
+      });
 
       return { message: "Verification email sent" };
     } catch (error) {
@@ -286,79 +314,6 @@ class UserService {
       return { message: "Email successfully verified" };
     } catch (error) {
       throw new Error("Failed to verify email");
-    }
-  }
-
-  public async requestPasswordReset(email: string) {
-    try {
-      const user = await this.findUserByEmail(email);
-      if (!user) {
-        throw new Error("User with this email does not exist");
-      }
-
-      const resetToken = uuidv4();
-      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
-
-      await prisma.user.update({
-        where: { email },
-        data: { resetToken, resetTokenExpiry },
-      });
-
-      const transporter = nodemailer.createTransport({
-        service: process.env.EMAIL_SERVICE,
-        host: process.env.EMAIL_HOST,
-        port: Number(process.env.EMAIL_PORT),
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
-      });
-
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: "Password Reset",
-        text: `Please reset your password by using the following token: ${resetToken}`,
-        html: `<p>Please reset your password by using the following token: <strong>${resetToken}</strong></p>`,
-      };
-
-      await transporter.sendMail(mailOptions);
-
-      return { message: "Password reset token sent to email" };
-    } catch (error) {
-      throw new Error("Failed to request password reset");
-    }
-  }
-
-  public async resetPassword(token: string, newPassword: string) {
-    try {
-      const user = await prisma.user.findFirst({
-        where: {
-          resetToken: token,
-          resetTokenExpiry: {
-            gte: new Date(),
-          },
-        },
-      });
-
-      if (!user) {
-        throw new Error("Invalid or expired reset token");
-      }
-
-      const hashedPassword = await bcrypt.hash(newPassword.toLowerCase(), 10);
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          password: hashedPassword,
-          resetToken: null,
-          resetTokenExpiry: null,
-        },
-      });
-
-      return { message: "Password successfully reset" };
-    } catch (error) {
-      throw new Error("Failed to reset password");
     }
   }
 }
