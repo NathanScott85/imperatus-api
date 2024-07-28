@@ -17,7 +17,6 @@ model User {
   address          String
   city             String
   postcode         String
-  admin            Boolean   @default(false) // Can be deprecated later
   resetToken       String?   
   resetTokenExpiry DateTime?
   emailVerified    Boolean   @default(false)
