@@ -3,13 +3,21 @@ import { v4 as uuidv4 } from "uuid";
 
 const secret = process.env.JSON_WEB_TOKEN_SECRET || "your_secret_key";
 
-class AutherisationTokenService {
+class AuthorizationTokenService {
   public static generateToken(user: {
     id: number;
     email: string;
     roles: string[];
   }) {
-    return jwt.sign(user, secret, { expiresIn: "1h" });
+    return jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        roles: user.roles, // Ensure roles are included
+      },
+      secret,
+      { expiresIn: "1d" }
+    );
   }
 
   public static verifyToken(token: string) {
@@ -37,4 +45,4 @@ class AutherisationTokenService {
   }
 }
 
-export default AutherisationTokenService;
+export default AuthorizationTokenService;

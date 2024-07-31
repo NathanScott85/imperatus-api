@@ -2,25 +2,57 @@ import { ApolloServer } from "apollo-server";
 import PrismaService from "../services/prisma";
 import resolvers from "../services/users/resolvers";
 import typeDefs from "../services/users/typeDefs";
-import AutherisationTokenService from "../services/token";
+import AuthorizationTokenService from "../services/token";
+import jwt from "jsonwebtoken";
+
+export interface DecodedToken {
+  id: number;
+  email: string;
+  roles: string[];
+}
 
 export const prisma = PrismaService.getInstance();
 
 export const server = new ApolloServer({
   typeDefs,
   resolvers,
-  context: ({ req }: any) => {
+  context: async ({ req }) => {
     const token = req.headers.authorization || "";
     let user = null;
+
     if (token) {
       try {
-        user = AutherisationTokenService.verifyToken(
+        const decodedToken = AuthorizationTokenService.verifyToken(
           token.replace("Bearer ", "")
         );
+        user = await prisma.user.findUnique({
+          where: { id: (decodedToken as jwt.JwtPayload).id },
+          include: {
+            roles: {
+              include: {
+                role: true,
+              },
+            },
+          },
+        });
+        if (!user) {
+          throw new Error("User not found");
+        }
+        user.roles = user.roles.map((userRole: any) => userRole.role.name);
       } catch (e) {
         console.warn(`Unable to authenticate using token: ${token}`);
       }
     }
-    return { user, prisma };
+
+    return { user, prisma, req };
   },
+  plugins: [
+    {
+      requestDidStart: async () => ({
+        willSendResponse: async ({ context }: any) => {
+          // No authentication logic here, just for response handling if needed
+        },
+      }),
+    },
+  ],
 });

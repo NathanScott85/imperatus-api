@@ -49,24 +49,27 @@ const typeDefs = gql`
     admin: Boolean
   }
 
+  input RegisterInput {
+    fullname: String!
+    email: String!
+    password: String!
+    dob: String!
+    phone: String!
+    address: String!
+    city: String!
+    postcode: String!
+    roles: [String!]
+  }
+
   type Query {
     users: [User!]!
     user(id: Int!): User
     getCurrentUser: User
+    roles: [Role!]!
   }
 
   type Mutation {
-    createUser(
-      fullname: String!
-      email: String!
-      password: String!
-      dob: String!
-      phone: String!
-      address: String!
-      city: String!
-      postcode: String!
-      roles: [String!]
-    ): User!
+    createUser(input: RegisterInput!): User!
     loginUser(email: String!, password: String!): AuthPayload!
     requestPasswordReset(email: String!): Message!
     resetPassword(token: String!, newPassword: String!): Message!
@@ -78,6 +81,10 @@ const typeDefs = gql`
     refreshToken(token: String!): AuthPayload!
     updateUserRole(id: Int!, admin: Boolean!): User!
     logoutUser: Message!
+    registerUser(input: RegisterInput!): User!
+    createRole(name: String!): Role!
+    deleteRole(name: String!): Message!
+    assignRoleToUser(userId: Int!, roleName: String!): Message!
   }
 `;
 

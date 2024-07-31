@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../../server";
 import SecurityService from "../security";
 import EmailService from "../email";
+import RoleService from "../roles"; // Import RoleService
 
 class UserService {
   public async getUsers() {
@@ -17,6 +18,7 @@ class UserService {
         },
       });
     } catch (error) {
+      console.log(error, "error");
       throw new Error("Failed to retrieve users");
     }
   }
@@ -66,8 +68,12 @@ class UserService {
     postcode: string;
     roles?: string[];
   }) {
-    const hashedPassword = await SecurityService.hashPassword(data.password);
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email.toLowerCase() },
+    });
+    if (existingUser) throw new Error("User with this email already exists");
 
+    const hashedPassword = await SecurityService.hashPassword(data.password);
     const formattedData = {
       ...data,
       password: hashedPassword,
@@ -76,20 +82,9 @@ class UserService {
       phone: data.phone,
     };
 
-    // Fetch the role(s) from the database
     const roles = data.roles?.length
-      ? await prisma.role.findMany({
-          where: {
-            name: {
-              in: data.roles,
-            },
-          },
-        })
-      : await prisma.role.findMany({
-          where: {
-            name: "USER",
-          },
-        });
+      ? await RoleService.getAllRoles()
+      : await prisma.role.findMany({ where: { name: "USER" } });
 
     try {
       const user = await prisma.user.create({
@@ -97,9 +92,7 @@ class UserService {
           ...formattedData,
           roles: {
             create: roles.map((role) => ({
-              role: {
-                connect: { id: role.id },
-              },
+              role: { connect: { id: role.id } },
             })),
           },
         },
@@ -120,11 +113,12 @@ class UserService {
         Array.isArray(error.meta?.target) &&
         error.meta?.target.includes("email")
       ) {
-        throw new Error("Email is already in use");
+        throw new Error("An account with this email already exists");
       }
       throw new Error("Failed to create user");
     }
   }
+
   public async deleteUser(id: number) {
     try {
       const user = await prisma.user.findUnique({ where: { id } });
@@ -199,7 +193,6 @@ class UserService {
     }
 
     try {
-      // Update user details
       const updatedUser = await prisma.user.update({
         where: { id },
         data: {
@@ -214,14 +207,11 @@ class UserService {
         },
       });
 
-      // Update roles if provided
       if (data.roles) {
-        // Remove existing roles
         await prisma.userRole.deleteMany({
           where: { userId: id },
         });
 
-        // Add new roles
         await prisma.user.update({
           where: { id },
           data: {
@@ -250,9 +240,9 @@ class UserService {
     }
   }
 
-  public async sendVerificationEmail(userId: number) {
+  public async sendVerificationEmail(id: number) {
     try {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await prisma.user.findUnique({ where: { id: id } });
       if (!user) {
         throw new Error("User not found");
       }
@@ -263,7 +253,7 @@ class UserService {
       );
 
       await prisma.user.update({
-        where: { id: userId },
+        where: { id: id },
         data: { verificationToken, verificationTokenExpiry },
       });
 
@@ -315,7 +305,7 @@ class UserService {
       return { message: "Email successfully verified" };
     } catch (error: any) {
       if (error.message === "Invalid or expired verification token") {
-        throw error; // Propagate the specific error
+        throw error;
       }
       throw new Error("Failed to verify email");
     }

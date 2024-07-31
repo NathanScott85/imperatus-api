@@ -1,13 +1,11 @@
 import { prisma } from "../../server";
 import SecurityService from "../security";
-import AutherisationTokenService from "../token";
+import UserService from "../users";
+import AuthorizationTokenService from "../token";
 import EmailService from "../email";
 
 class AuthenticationService {
-  public async loginUser(
-    email: string,
-    password: string
-  ): Promise<{ token: string; user: any }> {
+  public async loginUser(email: string, password: string) {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -18,26 +16,42 @@ class AuthenticationService {
         },
       },
     });
-
-    if (!user) {
-      console.error("User not found.");
-      throw new Error("User not found");
+    if (
+      !user ||
+      !(await SecurityService.comparePassword(password, user.password))
+    ) {
+      throw new Error("Invalid email or password");
     }
 
-    const isValid = await SecurityService.comparePassword(
-      password,
-      user.password
-    );
-
-    if (!isValid) {
-      console.error("Password does not match.");
-      throw new Error("Invalid password");
-    }
-
-    const token = AutherisationTokenService.generateToken({
+    const token = AuthorizationTokenService.generateToken({
       id: user.id,
       email: user.email,
-      roles: user.roles.map((role: any) => role.role.name),
+      roles: user.roles.map((user: any) => user.role.name),
+    });
+
+    return { token, user };
+  }
+
+  public async registerUser(data: {
+    fullname: string;
+    email: string;
+    password: string;
+    dob: string;
+    phone: string;
+    address: string;
+    city: string;
+    postcode: string;
+  }) {
+    const user = await UserService.createUser({
+      ...data,
+      roles: ["USER"], // Assign default role "USER" on registration
+    });
+    await UserService.sendVerificationEmail(user.id);
+
+    const token = AuthorizationTokenService.generateToken({
+      id: user.id,
+      email: user.email,
+      roles: ["USER"],
     });
 
     return { token, user };
@@ -50,7 +64,7 @@ class AuthenticationService {
     }
 
     const { resetToken, resetTokenExpiry } =
-      AutherisationTokenService.generateResetToken();
+      AuthorizationTokenService.generateResetToken();
 
     await prisma.user.update({
       where: { email },
