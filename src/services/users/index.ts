@@ -10,7 +10,7 @@ class UserService {
     try {
       return await prisma.user.findMany({
         include: {
-          roles: {
+          userRoles: {
             include: {
               role: true,
             },
@@ -18,7 +18,6 @@ class UserService {
         },
       });
     } catch (error) {
-      console.log(error, "error");
       throw new Error("Failed to retrieve users");
     }
   }
@@ -28,7 +27,7 @@ class UserService {
       return await prisma.user.findUnique({
         where: { id },
         include: {
-          roles: {
+          userRoles: {
             include: {
               role: true,
             },
@@ -45,7 +44,7 @@ class UserService {
       return await prisma.user.findUnique({
         where: { email },
         include: {
-          roles: {
+          userRoles: {
             include: {
               role: true,
             },
@@ -58,31 +57,37 @@ class UserService {
   }
 
   public async createUser(data: {
-    fullname: string;
-    email: string;
-    password: string;
-    dob: string;
-    phone: string;
-    address: string;
-    city: string;
-    postcode: string;
-    roles?: string[];
+    input: {
+      fullname: string;
+      email: string;
+      password: string;
+      dob: string;
+      phone: string;
+      address: string;
+      city: string;
+      postcode: string;
+      roles: number[];
+    };
   }) {
+    console.log("data", data);
+
     const existingUser = await prisma.user.findUnique({
-      where: { email: data.email.toLowerCase() },
+      where: { email: data.input.email.toLowerCase() },
     });
     if (existingUser) throw new Error("User with this email already exists");
 
-    const hashedPassword = await SecurityService.hashPassword(data.password);
+    const hashedPassword = await SecurityService.hashPassword(
+      data.input.password
+    );
     const formattedData = {
-      ...data,
+      ...data.input,
       password: hashedPassword,
-      email: data.email.toLowerCase(),
-      dob: new Date(data.dob).toISOString(),
-      phone: data.phone,
+      email: data.input.email.toLowerCase(),
+      dob: new Date(data.input.dob).toISOString(),
+      phone: data.input.phone,
     };
 
-    const roles = data.roles?.length
+    const roles = data.input.roles?.length
       ? await RoleService.getAllRoles()
       : await prisma.role.findMany({ where: { name: "USER" } });
 
@@ -90,14 +95,14 @@ class UserService {
       const user = await prisma.user.create({
         data: {
           ...formattedData,
-          roles: {
+          userRoles: {
             create: roles.map((role) => ({
               role: { connect: { id: role.id } },
             })),
           },
         },
         include: {
-          roles: {
+          userRoles: {
             include: {
               role: true,
             },
@@ -107,6 +112,7 @@ class UserService {
 
       return user;
     } catch (error) {
+      console.error(error, "error");
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002" &&
@@ -115,6 +121,7 @@ class UserService {
       ) {
         throw new Error("An account with this email already exists");
       }
+      console.error(error, "error");
       throw new Error("Failed to create user");
     }
   }
@@ -148,7 +155,7 @@ class UserService {
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
-          roles: {
+          userRoles: {
             create: roles.map((role) => ({
               role: {
                 connect: { name: role },
@@ -157,7 +164,7 @@ class UserService {
           },
         },
         include: {
-          roles: {
+          userRoles: {
             include: {
               role: true,
             },
@@ -215,7 +222,7 @@ class UserService {
         await prisma.user.update({
           where: { id },
           data: {
-            roles: {
+            userRoles: {
               create: data.roles.map((role) => ({
                 role: {
                   connect: { name: role },

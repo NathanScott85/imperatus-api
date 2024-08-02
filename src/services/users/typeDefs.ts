@@ -14,12 +14,13 @@ const typeDefs = gql`
     emailVerified: Boolean
     verificationToken: String
     verificationTokenExpiry: String
-    roles: [Role!]!
+    userRoles: [UserRole!]
   }
 
   type Role {
     id: Int!
-    name: String!
+    name: String
+    users: [User!]!
   }
 
   type UserRole {
@@ -58,18 +59,17 @@ const typeDefs = gql`
     address: String!
     city: String!
     postcode: String!
-    roles: [String!]
+    roles: [Int!]
   }
 
   type Query {
     users: [User!]!
     user(id: Int!): User
     getCurrentUser: User
-    roles: [Role!]!
   }
 
   type Mutation {
-    createUser(input: RegisterInput!): User!
+    createUser(input: RegisterInput!): User
     loginUser(email: String!, password: String!): AuthPayload!
     requestPasswordReset(email: String!): Message!
     resetPassword(token: String!, newPassword: String!): Message!

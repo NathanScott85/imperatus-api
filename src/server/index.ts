@@ -28,7 +28,7 @@ export const server = new ApolloServer({
         user = await prisma.user.findUnique({
           where: { id: (decodedToken as jwt.JwtPayload).id },
           include: {
-            roles: {
+            userRoles: {
               include: {
                 role: true,
               },
@@ -38,7 +38,6 @@ export const server = new ApolloServer({
         if (!user) {
           throw new Error("User not found");
         }
-        user.roles = user.roles.map((userRole: any) => userRole.role.name);
       } catch (e) {
         console.warn(`Unable to authenticate using token: ${token}`);
       }

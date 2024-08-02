@@ -3,19 +3,21 @@ import SecurityService from "../security";
 import UserService from "../users";
 import AuthorizationTokenService from "../token";
 import EmailService from "../email";
+import RoleService from "../roles"; // Import RoleService
 
 class AuthenticationService {
   public async loginUser(email: string, password: string) {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        roles: {
+        userRoles: {
           include: {
             role: true,
           },
         },
       },
     });
+
     if (
       !user ||
       !(await SecurityService.comparePassword(password, user.password))
@@ -23,39 +25,49 @@ class AuthenticationService {
       throw new Error("Invalid email or password");
     }
 
-    const token = AuthorizationTokenService.generateToken({
-      id: user.id,
-      email: user.email,
-      roles: user.roles.map((user: any) => user.role.name),
-    });
-
-    return { token, user };
-  }
-
-  public async registerUser(data: {
-    fullname: string;
-    email: string;
-    password: string;
-    dob: string;
-    phone: string;
-    address: string;
-    city: string;
-    postcode: string;
-  }) {
-    const user = await UserService.createUser({
-      ...data,
-      roles: ["USER"], // Assign default role "USER" on registration
-    });
-    await UserService.sendVerificationEmail(user.id);
+    const roles = await RoleService.getUserRoles(user.id);
 
     const token = AuthorizationTokenService.generateToken({
       id: user.id,
       email: user.email,
-      roles: ["USER"],
+      roles: roles.map((role) => role.role.name),
     });
 
-    return { token, user };
+    return {
+      token,
+      user: {
+        ...user,
+        roles,
+      },
+    };
   }
+  // public async registerUser(input: {
+  //   fullname: string;
+  //   email: string;
+  //   password: string;
+  //   dob: string;
+  //   phone: string;
+  //   address: string;
+  //   city: string;
+  //   postcode: string;
+  // }) {
+  //   const user = await UserService.createUser({
+  //     ...input,
+  //   });
+
+  //   const roles = user.roles
+  //     .map((user: any) => user.role?.name)
+  //     .filter(Boolean);
+  //   await UserService.sendVerificationEmail(user.id);
+
+  //   const token = AuthorizationTokenService.generateToken({
+  //     id: user.id,
+  //     email: user.email,
+  //     roles: roles,
+  //   });
+
+  //   return { token, user };
+  // }
 
   public async requestPasswordReset(email: string) {
     const user = await prisma.user.findUnique({ where: { email } });
