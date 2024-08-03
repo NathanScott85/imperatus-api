@@ -5,7 +5,6 @@ import {
 } from "apollo-server";
 import UserService from "../users";
 import AuthenticationService from "../authentication";
-// import AuthorizationTokenService from "../token";
 import SecurityService from "../security";
 import RoleService from "../roles"; // Import RoleService
 import { Prisma } from "@prisma/client";
@@ -106,7 +105,7 @@ const resolvers = {
       const userRoles = user.userRoles.map((userRole) => userRole.role.name);
 
       // Send verification email
-      await UserService.sendVerificationEmail(user.id);
+      // await UserService.sendVerificationEmail(user.id);
 
       return { ...user, roles: userRoles };
     },
@@ -220,6 +219,45 @@ const resolvers = {
               ? error.message
               : "An error occurred while resetting the password.",
         };
+      }
+    },
+
+    verifyEmail: async (
+      _: unknown,
+      args: { token: string }
+    ): Promise<{ message: string }> => {
+      try {
+        console.log(args.token, "args.token");
+
+        // Find the user by the verification token
+        const user = await prisma.user.findFirst({
+          where: {
+            verificationToken: args.token, // Match the verification token
+            verificationTokenExpiry: {
+              gte: new Date(), // Ensure the token has not expired
+            },
+          },
+        });
+
+        // If no user is found, or if the token is invalid, throw an error
+        if (!user) {
+          throw new Error("Invalid or expired verification token");
+        }
+
+        // Update the user to mark the email as verified
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            verificationToken: null, // Clear the verification token
+            verificationTokenExpiry: null, // Clear the expiry date
+            emailVerified: true, // Mark the email as verified
+          },
+        });
+
+        return { message: "Email verified successfully." };
+      } catch (error) {
+        console.error("Verification failed:", error);
+        return { message: "Failed to verify email. Please try again later." };
       }
     },
 
