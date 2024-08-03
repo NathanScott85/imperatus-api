@@ -2,31 +2,27 @@ import { ApolloServer } from "apollo-server";
 import PrismaService from "../services/prisma";
 import resolvers from "../services/users/resolvers";
 import typeDefs from "../services/users/typeDefs";
-import AuthorizationTokenService from "../services/token";
-import jwt from "jsonwebtoken";
-
-export interface DecodedToken {
-  id: number;
-  email: string;
-  roles: string[];
-}
+import TokenService, { TokenPayload } from "../services/token";
 
 export const prisma = PrismaService.getInstance();
 
 export const server = new ApolloServer({
   typeDefs,
   resolvers,
+  introspection: process.env.NODE_ENV !== "production",
   context: async ({ req }) => {
-    const token = req.headers.authorization || "";
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.replace("Bearer ", "");
     let user = null;
 
     if (token) {
       try {
-        const decodedToken = AuthorizationTokenService.verifyToken(
-          token.replace("Bearer ", "")
-        );
-        user = await prisma.user.findUnique({
-          where: { id: (decodedToken as jwt.JwtPayload).id },
+        // Verify the JWT and extract user info
+        const decodedToken = TokenService.verifyToken(token) as TokenPayload;
+
+        // Fetch the user from the database based on decoded token
+        const dbUser = await prisma.user.findUnique({
+          where: { id: decodedToken.id },
           include: {
             userRoles: {
               include: {
@@ -35,11 +31,22 @@ export const server = new ApolloServer({
             },
           },
         });
-        if (!user) {
+
+        if (!dbUser) {
           throw new Error("User not found");
         }
+
+        // Map roles from userRoles to a simple array of role names
+        const roles = dbUser.userRoles.map((userRole) => userRole.role.name);
+
+        // Construct user object for context
+        user = {
+          id: dbUser.id,
+          email: dbUser.email,
+          roles,
+        };
       } catch (e) {
-        console.warn(`Unable to authenticate using token: ${token}`);
+        console.warn(`Unable to authenticate using token: ${token}`, e);
       }
     }
 
@@ -49,7 +56,7 @@ export const server = new ApolloServer({
     {
       requestDidStart: async () => ({
         willSendResponse: async ({ context }: any) => {
-          // No authentication logic here, just for response handling if needed
+          // Modify the response if needed
         },
       }),
     },

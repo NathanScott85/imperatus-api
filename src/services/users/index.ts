@@ -52,7 +52,7 @@ class UserService {
         },
       });
     } catch (error) {
-      throw new Error("Failed to retrieve user by email");
+      throw new Error("Something went wrong!");
     }
   }
 

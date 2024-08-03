@@ -62,17 +62,20 @@ const typeDefs = gql`
     roles: [Int!]
   }
 
+  type ResetResponse {
+    message: String!
+  }
+
   type Query {
     users: [User!]!
     user(id: Int!): User
-    getCurrentUser: User
   }
 
   type Mutation {
     createUser(input: RegisterInput!): User
     loginUser(email: String!, password: String!): AuthPayload!
-    requestPasswordReset(email: String!): Message!
-    resetPassword(token: String!, newPassword: String!): Message!
+    requestPasswordReset(email: String!): ResetResponse!
+    resetPassword(token: String!, newPassword: String!): ResetResponse!
     updateUserRoles(userId: Int!, roles: [String!]!): User!
     updateUser(id: Int!, data: UpdateUserInput!): User!
     sendVerificationEmail(userId: Int!): Message!
