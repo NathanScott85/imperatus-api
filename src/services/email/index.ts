@@ -41,7 +41,7 @@ class EmailService {
       console.log(`Email sent to ${to}`);
     } catch (error) {
       console.error(`Failed to send email to ${to}`, error);
-      throw error;
+      return { success: false, error: `Failed to send email` };
     }
   }
 }

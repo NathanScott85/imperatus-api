@@ -1,11 +1,16 @@
-import { AuthenticationError, UserInputError } from "apollo-server";
+import {
+  ApolloError,
+  AuthenticationError,
+  UserInputError,
+} from "apollo-server";
 import UserService from "../users";
 import AuthenticationService from "../authentication";
-import AuthorizationTokenService from "../token";
+// import AuthorizationTokenService from "../token";
+import SecurityService from "../security";
 import RoleService from "../roles"; // Import RoleService
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../server";
-import SecurityService from "../security";
+import { DeleteUserArgs, DeleteUserResponse } from "../../types/user";
 
 const hasRole = (user: any, roleName: string): boolean => {
   if (!user.roles) {
@@ -31,7 +36,6 @@ const isAdminOrOwner = (user: any) => {
 const resolvers = {
   Query: {
     users: async (_: unknown, __: unknown, { user }: any, context: any) => {
-      console.log(context, "context");
       if (!user) throw new AuthenticationError("You must be logged in");
       if (!isAdminOrOwner(user))
         throw new AuthenticationError("Permission denied");
@@ -106,7 +110,37 @@ const resolvers = {
 
       return { ...user, roles: userRoles };
     },
+    deleteUser: async (
+      _: unknown,
+      args: DeleteUserArgs
+    ): Promise<DeleteUserResponse> => {
+      const { id } = args;
 
+      try {
+        // Check if the user exists
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) {
+          throw new ApolloError(
+            `User with ID ${id} does not exist`,
+            "USER_NOT_FOUND"
+          );
+        }
+
+        // Delete associated user roles
+        await prisma.userRole.deleteMany({ where: { userId: id } });
+
+        // Delete the user
+        await prisma.user.delete({ where: { id } });
+
+        return { message: "User account deleted successfully" };
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        if (error instanceof ApolloError) {
+          throw error;
+        }
+        throw new ApolloError("Failed to delete user account", "DELETE_FAILED");
+      }
+    },
     requestPasswordReset: async (
       _: any,
       { email }: { email: string },
@@ -189,15 +223,57 @@ const resolvers = {
       }
     },
 
-    createUser: async (_: any, { input }: any) => {
-      const existingUser = await prisma.user.findUnique({
-        where: { email: input.email.toLowerCase() },
-      });
+    async sendVerificationEmail(_: any, { userId }: any) {
+      try {
+        const user = await UserService.getUserById(userId);
 
+        // Check if user exists and has a valid email
+        if (!user || !user.email) {
+          console.error("User not found or email not provided");
+          return { message: "User not found or email not provided" };
+        }
+
+        // Send the email
+        const sendEmail = await UserService.sendVerificationEmail(userId);
+
+        if (!sendEmail) {
+          return {
+            success: false,
+            message: "Failed to send verification email.",
+          };
+        }
+
+        return { message: "Verification email sent successfully." };
+      } catch (error) {
+        console.error("Error in sendVerificationEmail:", error);
+        return {
+          message: "An error occurred while sending the verification email.",
+        };
+      }
+    },
+
+    createUser: async (_: any, { input }: any, context: any) => {
+      const { user } = context;
+
+      // Ensure the user is authenticated
+      if (!user) {
+        throw new Error("Authentication required");
+      }
+      // Ensure the user has admin or owner privileges
+      if (!isAdminOrOwner(user))
+        throw new AuthenticationError("Permission denied");
+
+      // Check if a user with the provided email already exists
+      const existingUser = await UserService.findUserByEmail(
+        input.email.toLowerCase()
+      );
+
+      // If user exists, throw an error
       if (existingUser) {
         throw new Error("User with this email already exists");
       }
 
+      // Hash the password and determine roles
       const hashedPassword = await SecurityService.hashPassword(input.password);
       const roles = input.roles?.length
         ? await prisma.role.findMany({
@@ -208,6 +284,7 @@ const resolvers = {
         : await prisma.role.findMany({ where: { name: "USER" } });
 
       try {
+        // Create the new user with associated roles
         const user = await prisma.user.create({
           data: {
             fullname: input.fullname,
@@ -235,6 +312,7 @@ const resolvers = {
 
         return user;
       } catch (error) {
+        // Handle specific Prisma error for duplicate email
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002" &&
