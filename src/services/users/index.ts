@@ -69,8 +69,6 @@ class UserService {
       roles: number[];
     };
   }) {
-    console.log("data", data);
-
     const existingUser = await prisma.user.findUnique({
       where: { email: data.input.email.toLowerCase() },
     });

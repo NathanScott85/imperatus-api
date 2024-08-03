@@ -15,8 +15,6 @@ class RoleService {
     const roles = await prisma.role.findMany({
       where: { id: { in: roleIds } },
     });
-
-    console.log(roles);
     return roles;
   }
 

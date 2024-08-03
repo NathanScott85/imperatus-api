@@ -227,8 +227,6 @@ const resolvers = {
       args: { token: string }
     ): Promise<{ message: string }> => {
       try {
-        console.log(args.token, "args.token");
-
         // Find the user by the verification token
         const user = await prisma.user.findFirst({
           where: {
