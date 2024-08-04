@@ -66,9 +66,15 @@ const typeDefs = gql`
     message: String!
   }
 
+  type VerificationStatus {
+    emailVerified: Boolean!
+    message: String!
+  }
+
   type Query {
     users: [User!]!
     user(id: Int!): User
+    getVerificationStatus(userId: Int!): VerificationStatus!
   }
 
   type Mutation {

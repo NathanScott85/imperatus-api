@@ -39,6 +39,33 @@ class UserService {
     }
   }
 
+  public async getVerificationStatus(userId: number) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        select: {
+          emailVerified: true,
+        },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      return {
+        emailVerified: user.emailVerified,
+        message: user.emailVerified
+          ? "Your account is already verified."
+          : "Your account is not verified yet.",
+      };
+    } catch (error) {
+      console.error("Error fetching verification status:", error);
+      throw new Error("Could not fetch verification status.");
+    }
+  }
+
   public async findUserByEmail(email: string) {
     try {
       return await prisma.user.findUnique({

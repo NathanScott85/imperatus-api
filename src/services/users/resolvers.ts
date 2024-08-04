@@ -46,6 +46,10 @@ const resolvers = {
         throw new AuthenticationError("Permission denied");
       return await UserService.getUserById(args.id);
     },
+    getVerificationStatus: async (_: any, { userId }: any) => {
+      const verification = await UserService.getVerificationStatus(userId);
+      return verification;
+    },
   },
   Mutation: {
     registerUser: async (_: unknown, { input }: { input: any }) => {
