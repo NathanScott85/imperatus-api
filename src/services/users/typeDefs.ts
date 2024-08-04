@@ -30,7 +30,8 @@ const typeDefs = gql`
   }
 
   type AuthPayload {
-    token: String!
+    accessToken: String!
+    refreshToken: String!
     user: User!
   }
 
@@ -87,7 +88,7 @@ const typeDefs = gql`
     sendVerificationEmail(userId: Int!): Message!
     verifyEmail(token: String!): Message!
     deleteUser(id: Int!): Message!
-    refreshToken(token: String!): AuthPayload!
+    refreshToken(refreshToken: String!): AuthPayload!
     updateUserRole(id: Int!, admin: Boolean!): User!
     logoutUser: Message!
     registerUser(input: RegisterInput!): User!

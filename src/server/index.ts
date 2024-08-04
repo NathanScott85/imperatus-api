@@ -1,8 +1,10 @@
-import { ApolloServer } from "apollo-server";
+import { ApolloServer, AuthenticationError } from "apollo-server";
 import PrismaService from "../services/prisma";
 import resolvers from "../services/users/resolvers";
 import typeDefs from "../services/users/typeDefs";
 import TokenService, { TokenPayload } from "../services/token";
+import AuthorizationTokenService from "../services/token";
+import AuthenticationService from "../services/authentication";
 
 export const prisma = PrismaService.getInstance();
 
@@ -10,17 +12,20 @@ export const server = new ApolloServer({
   typeDefs,
   resolvers,
   introspection: process.env.NODE_ENV !== "production",
-  context: async ({ req }) => {
+  context: async ({ req }: any) => {
     const authHeader = req.headers.authorization || "";
-    const token = authHeader.replace("Bearer ", "");
+    const accessToken = authHeader.replace("Bearer ", "");
+    const refreshToken =
+      req.headers["x-refresh-token"] || req.headers.refreshtoken;
+
     let user = null;
 
-    if (token) {
+    if (accessToken) {
       try {
-        // Verify the JWT and extract user info
-        const decodedToken = TokenService.verifyToken(token) as TokenPayload;
+        const decodedToken = AuthorizationTokenService.verifyToken(
+          accessToken
+        ) as TokenPayload;
 
-        // Fetch the user from the database based on decoded token
         const dbUser = await prisma.user.findUnique({
           where: { id: decodedToken.id },
           include: {
@@ -46,11 +51,11 @@ export const server = new ApolloServer({
           roles,
         };
       } catch (e) {
-        console.warn(`Unable to authenticate using token: ${token}`, e);
+        console.warn(`Unable to authenticate using token: ${accessToken}`, e);
       }
     }
 
-    return { user, prisma, req };
+    return { user, prisma, req, refreshToken };
   },
   plugins: [
     {

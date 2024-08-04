@@ -1,10 +1,17 @@
-import { UserInputError } from "apollo-server";
+import { AuthenticationError, UserInputError } from "apollo-server";
+import jwt, { GetPublicKeyOrSecret, Secret } from "jsonwebtoken";
 import { prisma } from "../../server";
 import SecurityService from "../security";
 import UserService from "../users";
 import AuthorizationTokenService from "../token";
 import EmailService from "../email";
 import RoleService from "../roles"; // Import RoleService
+
+interface JwtPayload {
+  id: number; // Ensure this matches the type of User.id in Prisma schema
+  email: string;
+  roles: string[];
+}
 
 class AuthenticationService {
   public async loginUser(email: string, password: string) {
@@ -33,15 +40,28 @@ class AuthenticationService {
     const roles = rolesService.map((roleObject) => roleObject.role.name);
 
     // Generate JWT token with user's information
-    const token = AuthorizationTokenService.generateToken({
-      id: user.id,
-      email: user.email,
-      roles,
+    const { accessToken, refreshToken } =
+      AuthorizationTokenService.generateTokens({
+        id: user.id,
+        email: user.email,
+        roles,
+      });
+
+    // Store refresh token in the database
+    await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        refreshToken: refreshToken,
+        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      },
     });
 
     // Return the token and user data
     return {
-      token,
+      refreshToken,
+      accessToken,
       user: {
         ...user,
         roles,
@@ -49,6 +69,40 @@ class AuthenticationService {
     };
   }
 
+  public async logoutUser(refreshToken: string) {
+    if (!refreshToken) {
+      throw new AuthenticationError("Refresh token is missing.");
+    }
+
+    const secret = process.env.JSON_WEB_REFRESH_SECRET as Secret;
+
+    let decoded: JwtPayload;
+    try {
+      decoded = jwt.verify(refreshToken, secret) as JwtPayload;
+    } catch (err) {
+      throw new AuthenticationError("Invalid refresh token.");
+    }
+
+    const userId = decoded.id;
+
+    const user = await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        refreshToken: null,
+        refreshTokenExpiry: null,
+      },
+    });
+
+    if (!user) {
+      throw new Error("Failed to log out or user not found.");
+    }
+
+    return {
+      message: "User successfully logged out.",
+    };
+  }
   public async registerUser(input: {
     fullname: string;
     email: string;
@@ -117,7 +171,7 @@ class AuthenticationService {
     await UserService.sendVerificationEmail(user.id);
 
     // Generate JWT token
-    const token = AuthorizationTokenService.generateToken({
+    const token = AuthorizationTokenService.generateTokens({
       id: user.id,
       email: user.email,
       roles,

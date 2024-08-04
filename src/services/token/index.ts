@@ -1,7 +1,10 @@
 import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 
-const secret = process.env.JSON_WEB_TOKEN_SECRET || "your_secret_key";
+const access = process.env.JSON_WEB_ACCESS_TOKEN_SECRET as string;
+const refresh = process.env.JSON_WEB_REFRESH_SECRET as string;
+const refreshExpiry = process.env.REFRESH_TOKEN_EXPIRY as string;
+const accessExpiry = process.env.ACCESS_TOKEN_EXPIRY as string;
 
 export interface TokenPayload {
   id: number;
@@ -10,23 +13,24 @@ export interface TokenPayload {
 }
 
 class AuthorizationTokenService {
-  // Generate a JWT for user authentication
-  public static generateToken(user: TokenPayload): string {
-    return jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        roles: user.roles,
-      },
-      secret,
-      { expiresIn: "1d" } // Token expiry set to 1 day
-    );
+  // Generate a JWT for user authentication, need to sort out typing later.
+  public static generateTokens(user: TokenPayload): any {
+    const accessToken = jwt.sign({ id: user.id, email: user.email }, access, {
+      expiresIn: accessExpiry,
+    });
+    const refreshToken = jwt.sign({ id: user.id, email: user.email }, refresh, {
+      expiresIn: refreshExpiry,
+    });
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 
   // Verify the provided JWT and return decoded data
   public static verifyToken(token: string): TokenPayload | null {
     try {
-      return jwt.verify(token, secret) as TokenPayload;
+      return jwt.verify(token, access) as TokenPayload;
     } catch (error) {
       throw new Error("Invalid token");
     }
@@ -34,9 +38,9 @@ class AuthorizationTokenService {
 
   public static refreshToken(token: string) {
     try {
-      const decoded = jwt.verify(token, secret);
+      const decoded = jwt.verify(token, access);
       const { id, email, roles } = decoded as any;
-      return this.generateToken({ id, email, roles });
+      return this.generateTokens({ id, email, roles });
     } catch (error) {
       throw new Error("Invalid token");
     }
