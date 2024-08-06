@@ -82,7 +82,11 @@ const typeDefs = gql`
     createUser(input: RegisterInput!): User
     loginUser(email: String!, password: String!): AuthPayload!
     requestPasswordReset(email: String!): ResetResponse!
-    resetPassword(token: String!, newPassword: String!): ResetResponse!
+    resetPassword(
+      token: String!
+      newPassword: String!
+      email: String!
+    ): ResetResponse!
     updateUserRoles(userId: Int!, roles: [String!]!): User!
     updateUser(id: Int!, data: UpdateUserInput!): User!
     sendVerificationEmail(userId: Int!): Message!

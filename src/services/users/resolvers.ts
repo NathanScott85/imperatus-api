@@ -135,31 +135,15 @@ const resolvers = {
         throw new ApolloError("Failed to delete user account", "DELETE_FAILED");
       }
     },
-    requestPasswordReset: async (
-      _: any,
-      { email }: { email: string },
-      context: any
-    ) => {
-      const { user } = context;
-      if (!user) {
-        throw new AuthenticationError(
-          "You must be logged in to request a password reset."
-        );
-      }
-
-      // Ensure the logged-in user's email matches the requested email
-      if (user.email !== email) {
-        throw new AuthenticationError(
-          "You can only request a password reset for your own account."
-        );
-      }
-
+    requestPasswordReset: async (_: any, { email }: { email: string }) => {
+      // Ensure the provided email exists in the database
       const dbUser = await UserService.findUserByEmail(email);
       if (!dbUser) {
         throw new UserInputError("User with this email does not exist.");
       }
 
       try {
+        // Proceed to request a password reset
         const response = await AuthenticationService.requestPasswordReset(
           email
         );
@@ -178,23 +162,21 @@ const resolvers = {
         };
       }
     },
+
     resetPassword: async (
       _: any,
-      { token, newPassword }: { token: string; newPassword: string },
+      {
+        token,
+        newPassword,
+        email,
+      }: { token: string; newPassword: string; email: string },
       context: any
     ) => {
-      const { user } = context;
-      if (!user) {
-        throw new AuthenticationError(
-          "You must be logged in to reset your password."
-        );
-      }
-
       try {
         const response = await AuthenticationService.resetPassword(
           token,
           newPassword,
-          user.email
+          email
         );
 
         return {
@@ -348,6 +330,7 @@ const resolvers = {
           args.email,
           args.password
         );
+
         const { refreshToken } =
           AuthorizationTokenService.refreshToken(accessToken);
 

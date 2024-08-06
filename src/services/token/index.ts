@@ -3,8 +3,10 @@ import { v4 as uuidv4 } from "uuid";
 
 const access = process.env.JSON_WEB_ACCESS_TOKEN_SECRET as string;
 const refresh = process.env.JSON_WEB_REFRESH_SECRET as string;
-const refreshExpiry = process.env.REFRESH_TOKEN_EXPIRY as string;
-const accessExpiry = process.env.ACCESS_TOKEN_EXPIRY as string;
+const refreshExpiry = process.env.REFRESH_TOKEN_EXPIRY as string; // wont let me login with these
+const accessExpiry = process.env.ACCESS_TOKEN_EXPIRY as string; // wont let me login with these
+const ACCESS_TOKEN_EXPIRY = "15m";
+const REFRESH_TOKEN_EXPIRY = "7d";
 
 export interface TokenPayload {
   id: number;
@@ -16,10 +18,10 @@ class AuthorizationTokenService {
   // Generate a JWT for user authentication, need to sort out typing later.
   public static generateTokens(user: TokenPayload): any {
     const accessToken = jwt.sign({ id: user.id, email: user.email }, access, {
-      expiresIn: accessExpiry,
+      expiresIn: ACCESS_TOKEN_EXPIRY,
     });
     const refreshToken = jwt.sign({ id: user.id, email: user.email }, refresh, {
-      expiresIn: refreshExpiry,
+      expiresIn: REFRESH_TOKEN_EXPIRY,
     });
     return {
       accessToken,

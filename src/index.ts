@@ -1,5 +1,15 @@
-import { server } from "./server";
+import { startServer } from "./server"; // Import the startServer function from server.ts
 
-server.listen().then(({ url }: any) => {
-  console.log(`🚀 Server ready at ${url}`);
-});
+async function start() {
+  try {
+    const server = await startServer();
+    const port = 4000;
+    server.listen({ port }, () => {
+      console.log(`🚀 Server ready at http://localhost:${port}/graphql`);
+    });
+  } catch (error) {
+    console.error("Failed to start the server:", error);
+  }
+}
+
+start();
