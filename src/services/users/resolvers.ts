@@ -169,8 +169,7 @@ const resolvers = {
         token,
         newPassword,
         email,
-      }: { token: string; newPassword: string; email: string },
-      context: any
+      }: { token: string; newPassword: string; email: string }
     ) => {
       try {
         const response = await AuthenticationService.resetPassword(

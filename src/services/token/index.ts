@@ -1,5 +1,5 @@
+import { randomBytes } from "crypto";
 import jwt from "jsonwebtoken";
-import { v4 as uuidv4 } from "uuid";
 
 const access = process.env.JSON_WEB_ACCESS_TOKEN_SECRET as string;
 const refresh = process.env.JSON_WEB_REFRESH_SECRET as string;
@@ -50,7 +50,7 @@ class AuthorizationTokenService {
 
   // Generate a reset token for password recovery
   public static generateResetToken() {
-    const resetToken = uuidv4();
+    const resetToken = randomBytes(32).toString("hex"); // Secure token generation
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour expiry
     return { resetToken, resetTokenExpiry };
   }
