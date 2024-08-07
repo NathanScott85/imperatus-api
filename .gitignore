@@ -3,4 +3,5 @@ dist/
 prisma/*.db*
 # Keep environment variables out of version control
 .env
+.vscode/
 src/seed/
