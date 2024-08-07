@@ -13,7 +13,9 @@ CREATE TABLE "User" (
     "resetTokenExpiry" DATETIME,
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
     "verificationToken" TEXT,
-    "verificationTokenExpiry" DATETIME
+    "verificationTokenExpiry" DATETIME,
+    "refreshToken" TEXT,
+    "refreshTokenExpiry" DATETIME
 );
 
 -- CreateTable

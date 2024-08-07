@@ -23,6 +23,8 @@ model User {
   verificationToken       String?
   verificationTokenExpiry DateTime?
   userRoles               UserRole[] @relation("UserRoles")
+  refreshToken            String?    // Store a single refresh token directly on the User model
+  refreshTokenExpiry      DateTime?  // Store the expiry date of the refresh token
 }
 
 model Role {

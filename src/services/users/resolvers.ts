@@ -1,18 +1,23 @@
-import { AuthenticationError, UserInputError } from "apollo-server";
-import UserService from "../users";
-import AuthenticationService from "../authentication";
-import AuthorizationTokenService from "../token";
-import RoleService from "../roles"; // Import RoleService
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../server";
+import jwt, { Secret } from "jsonwebtoken";
+
+import {
+  ApolloError,
+  AuthenticationError,
+  UserInputError,
+} from "apollo-server";
+import UserService from "../users";
+import AuthenticationService from "../authentication";
 import SecurityService from "../security";
+import RoleService from "../roles"; // Import RoleService
+import AuthorizationTokenService from "../token";
+import { DeleteUserArgs, DeleteUserResponse } from "../../types/user";
 
 const hasRole = (user: any, roleName: string): boolean => {
   if (!user.roles) {
     throw new AuthenticationError("User does not have roles assigned.");
   }
-
-  // Check if the user has the specified role
   return user.roles.includes(roleName);
 };
 
@@ -31,7 +36,6 @@ const isAdminOrOwner = (user: any) => {
 const resolvers = {
   Query: {
     users: async (_: unknown, __: unknown, { user }: any, context: any) => {
-      console.log(context, "context");
       if (!user) throw new AuthenticationError("You must be logged in");
       if (!isAdminOrOwner(user))
         throw new AuthenticationError("Permission denied");
@@ -43,12 +47,16 @@ const resolvers = {
         throw new AuthenticationError("Permission denied");
       return await UserService.getUserById(args.id);
     },
+    getVerificationStatus: async (_: any, { userId }: any) => {
+      const verification = await UserService.getVerificationStatus(userId);
+      return verification;
+    },
   },
   Mutation: {
     registerUser: async (_: unknown, { input }: { input: any }) => {
       const { fullname, email, password, dob, phone, address, city, postcode } =
         input;
-      // Validate input data
+
       if (
         !fullname ||
         !email ||
@@ -62,7 +70,6 @@ const resolvers = {
         throw new UserInputError("All fields are required.");
       }
 
-      // Check if the user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: email.toLowerCase() },
       });
@@ -72,21 +79,18 @@ const resolvers = {
       const lowercaseEmail = email.toLowerCase();
       const hashedPassword = await SecurityService.hashPassword(password);
 
-      // Create the new user in the database
       const user = await prisma.user.create({
         data: {
           fullname,
           email: lowercaseEmail,
           password: hashedPassword,
-          dob: new Date(dob), // Ensure dob is a Date type
+          dob: new Date(dob),
           phone,
           address,
           city,
           postcode,
           userRoles: {
-            create: [
-              { role: { connect: { name: "USER" } } }, // Only assign the "USER" role
-            ],
+            create: [{ role: { connect: { name: "USER" } } }],
           },
         },
         include: {
@@ -98,43 +102,48 @@ const resolvers = {
         },
       });
 
-      // Extract roles
       const userRoles = user.userRoles.map((userRole) => userRole.role.name);
-
-      // Send verification email
-      await UserService.sendVerificationEmail(user.id);
 
       return { ...user, roles: userRoles };
     },
+    deleteUser: async (
+      _: unknown,
+      args: DeleteUserArgs
+    ): Promise<DeleteUserResponse> => {
+      const { id } = args;
 
-    requestPasswordReset: async (
-      _: any,
-      { email }: { email: string },
-      context: any
-    ) => {
-      const { user } = context; // Access the user from the context
-      // Check if the user is authenticated
-      if (!user) {
-        throw new AuthenticationError(
-          "You must be logged in to request a password reset."
-        );
+      try {
+        // Check if the user exists
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) {
+          throw new ApolloError(
+            `User with ID ${id} does not exist`,
+            "USER_NOT_FOUND"
+          );
+        }
+
+        await prisma.userRole.deleteMany({ where: { userId: id } });
+
+        await prisma.user.delete({ where: { id } });
+
+        return { message: "User account deleted successfully" };
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        if (error instanceof ApolloError) {
+          throw error;
+        }
+        throw new ApolloError("Failed to delete user account", "DELETE_FAILED");
       }
-
-      // Ensure the logged-in user's email matches the requested email
-      if (user.email !== email) {
-        throw new AuthenticationError(
-          "You can only request a password reset for your own account."
-        );
-      }
-
-      // Check if the user with the given email exists in the database
+    },
+    requestPasswordReset: async (_: any, { email }: { email: string }) => {
+      // Ensure the provided email exists in the database
       const dbUser = await UserService.findUserByEmail(email);
       if (!dbUser) {
         throw new UserInputError("User with this email does not exist.");
       }
 
       try {
-        // Call the AuthenticationService to handle the reset request
+        // Proceed to request a password reset
         const response = await AuthenticationService.requestPasswordReset(
           email
         );
@@ -153,25 +162,21 @@ const resolvers = {
         };
       }
     },
+
     resetPassword: async (
       _: any,
-      { token, newPassword }: { token: string; newPassword: string },
+      {
+        token,
+        newPassword,
+        email,
+      }: { token: string; newPassword: string; email: string },
       context: any
     ) => {
-      const { user } = context; // Access the user from the context
-
-      // Check if the user is authenticated
-      if (!user) {
-        throw new AuthenticationError(
-          "You must be logged in to reset your password."
-        );
-      }
-      // pass the token, user email and newpassword to the resetPassword
       try {
         const response = await AuthenticationService.resetPassword(
           token,
           newPassword,
-          user.email
+          email
         );
 
         return {
@@ -189,10 +194,80 @@ const resolvers = {
       }
     },
 
-    createUser: async (_: any, { input }: any) => {
-      const existingUser = await prisma.user.findUnique({
-        where: { email: input.email.toLowerCase() },
-      });
+    verifyEmail: async (
+      _: unknown,
+      args: { token: string }
+    ): Promise<{ message: string }> => {
+      try {
+        const user = await prisma.user.findFirst({
+          where: {
+            verificationToken: args.token,
+            verificationTokenExpiry: {
+              gte: new Date(),
+            },
+          },
+        });
+
+        if (!user) {
+          throw new Error("Invalid or expired verification token");
+        }
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            verificationToken: null,
+            verificationTokenExpiry: null,
+            emailVerified: true,
+          },
+        });
+
+        return { message: "Email verified successfully." };
+      } catch (error) {
+        console.error("Verification failed:", error);
+        return { message: "Failed to verify email. Please try again later." };
+      }
+    },
+
+    async sendVerificationEmail(_: any, { userId }: any) {
+      try {
+        const user = await UserService.getUserById(userId);
+
+        if (!user || !user.email) {
+          console.error("User not found or email not provided");
+          return { message: "User not found or email not provided" };
+        }
+
+        const sendEmail = await UserService.sendVerificationEmail(userId);
+
+        if (!sendEmail) {
+          return {
+            success: false,
+            message: "Failed to send verification email.",
+          };
+        }
+
+        return { message: "Verification email sent successfully." };
+      } catch (error) {
+        console.error("Error in sendVerificationEmail:", error);
+        return {
+          message: "An error occurred while sending the verification email.",
+        };
+      }
+    },
+
+    createUser: async (_: any, { input }: any, context: any) => {
+      const { user } = context;
+
+      if (!user) {
+        throw new Error("Authentication required");
+      }
+
+      if (!isAdminOrOwner(user))
+        throw new AuthenticationError("Permission denied");
+
+      const existingUser = await UserService.findUserByEmail(
+        input.email.toLowerCase()
+      );
 
       if (existingUser) {
         throw new Error("User with this email already exists");
@@ -251,26 +326,50 @@ const resolvers = {
       args: { email: string; password: string }
     ) => {
       try {
-        const { token, user } = await AuthenticationService.loginUser(
+        const { accessToken, user } = await AuthenticationService.loginUser(
           args.email,
           args.password
         );
-        return { token, user };
+
+        const { refreshToken } =
+          AuthorizationTokenService.refreshToken(accessToken);
+
+        return { accessToken, user, refreshToken };
       } catch (error) {
+        console.error(error, "error");
         throw new AuthenticationError("Invalid email or password");
       }
     },
+
+    logoutUser: async (parent: any, args: any, context: any) => {
+      const { refreshToken } = context;
+
+      if (!refreshToken) {
+        throw new AuthenticationError("Refresh token is missing.");
+      }
+
+      const result = await AuthenticationService.logoutUser(refreshToken);
+
+      return result;
+    },
+
+    refreshToken: async (parent: any, { refreshToken }: any, context: any) => {
+      return await AuthorizationTokenService.refreshToken(refreshToken);
+    },
+
     createRole: async (_: unknown, args: { name: string }, { user }: any) => {
       if (!user || !isOwner(user))
         throw new AuthenticationError("Permission denied");
       return await RoleService.createRole(args.name);
     },
+
     deleteRole: async (_: unknown, args: { name: string }, { user }: any) => {
       if (!user || !isOwner(user))
         throw new AuthenticationError("Permission denied");
       await RoleService.deleteRole(args.name);
       return { message: "Role deleted successfully" };
     },
+
     updateUserRoles: async (
       _: unknown,
       args: { userId: number; roles: string[] },
@@ -282,6 +381,7 @@ const resolvers = {
         );
       return await UserService.updateUserRoles(args.userId, args.roles);
     },
+
     assignRoleToUser: async (
       _: unknown,
       { userId, roleName }: { userId: number; roleName: string },
