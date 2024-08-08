@@ -3,8 +3,6 @@ import jwt from "jsonwebtoken";
 
 const access = process.env.JSON_WEB_ACCESS_TOKEN_SECRET as string;
 const refresh = process.env.JSON_WEB_REFRESH_SECRET as string;
-const refreshExpiry = process.env.REFRESH_TOKEN_EXPIRY as string; // wont let me login with these
-const accessExpiry = process.env.ACCESS_TOKEN_EXPIRY as string; // wont let me login with these
 const ACCESS_TOKEN_EXPIRY = "15m";
 const REFRESH_TOKEN_EXPIRY = "7d";
 
@@ -15,8 +13,11 @@ export interface TokenPayload {
 }
 
 class AuthorizationTokenService {
-  // Generate a JWT for user authentication, need to sort out typing later.
-  public static generateTokens(user: TokenPayload): any {
+  // Generate a JWT for user authentication
+  public static generateTokens(user: TokenPayload): {
+    accessToken: string;
+    refreshToken: string;
+  } {
     const accessToken = jwt.sign({ id: user.id, email: user.email }, access, {
       expiresIn: ACCESS_TOKEN_EXPIRY,
     });
@@ -30,27 +31,34 @@ class AuthorizationTokenService {
   }
 
   // Verify the provided JWT and return decoded data
-  public static verifyToken(token: string): TokenPayload | null {
+  public static verifyToken(
+    token: string,
+    type: "access" | "refresh"
+  ): TokenPayload | null {
     try {
-      return jwt.verify(token, access) as TokenPayload;
+      const secret = type === "access" ? access : refresh;
+      return jwt.verify(token, secret) as TokenPayload;
     } catch (error) {
       throw new Error("Invalid token");
     }
   }
 
-  public static refreshToken(token: string) {
+  // Refresh the token by generating a new pair of tokens
+  public static refreshToken(token: string): {
+    accessToken: string;
+    refreshToken: string;
+  } {
     try {
-      const decoded = jwt.verify(token, access);
-      const { id, email, roles } = decoded as any;
-      return this.generateTokens({ id, email, roles });
+      const decoded = jwt.verify(token, refresh) as TokenPayload;
+      return this.generateTokens(decoded);
     } catch (error) {
-      throw new Error("Invalid token");
+      throw new Error("Invalid refresh token");
     }
   }
 
   // Generate a reset token for password recovery
   public static generateResetToken() {
-    const resetToken = randomBytes(32).toString("hex"); // Secure token generation
+    const resetToken = randomBytes(32).toString("hex");
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour expiry
     return { resetToken, resetTokenExpiry };
   }
