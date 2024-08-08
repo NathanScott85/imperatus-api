@@ -49,7 +49,8 @@ export const startServer = async (): Promise<http.Server> => {
         if (accessToken) {
           try {
             const decodedToken = AuthorizationTokenService.verifyToken(
-              accessToken
+              accessToken,
+              "access"
             ) as TokenPayload;
 
             const dbUser = await prisma.user.findUnique({

@@ -6,6 +6,7 @@ import UserService from "../users";
 import AuthorizationTokenService from "../token";
 import EmailService from "../email";
 import RoleService from "../roles"; // Import RoleService
+import { createHash } from "crypto";
 
 interface JwtPayload {
   id: number; // Ensure this matches the type of User.id in Prisma schema
@@ -182,24 +183,40 @@ class AuthenticationService {
 
   public async requestPasswordReset(email: string) {
     const user = await UserService.findUserByEmail(email);
+    if (!user) {
+      // Generic error to prevent information leakage
+      throw new Error(
+        "If the email is associated with an account, you will receive a reset link."
+      );
+    }
+
     const { resetToken, resetTokenExpiry } =
       AuthorizationTokenService.generateResetToken();
 
-    if (!user) {
-      throw new Error("User with this email does not exist");
-    }
+    // Hash the reset token before storing it
+    const hashedResetToken = createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
+    // Store the hashed token and expiry in the database
     await prisma.user.update({
       where: { email },
-      data: { resetToken, resetTokenExpiry },
+      data: { resetToken: hashedResetToken, resetTokenExpiry },
     });
+
+    // Send the email with the reset link
+    const resetLink = `${
+      process.env.FRONTEND_URL
+    }/account/reset-password?token=${resetToken}&email=${encodeURIComponent(
+      email
+    )}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER || "no-reply@imperatus.co.uk",
       to: user.email,
       subject: "Password Reset",
-      text: `Please reset your password by using the following token: ${resetToken}`,
-      html: `<p>Please reset your password by using the following token: <strong>${resetToken}</strong></p>`,
+      text: `Please reset your password by clicking the following link: ${resetLink}`,
+      html: `<p>Please reset your password by clicking the following link: <a href="${resetLink}">Reset Password</a></p>`,
     };
 
     await EmailService.sendMail(mailOptions);
@@ -212,25 +229,28 @@ class AuthenticationService {
     newPassword: string,
     email: string
   ) {
-    // Find the user with the given reset token and ensure the token has not expired
+    // Hash the incoming token for comparison
+    const hashedResetToken = createHash("sha256").update(token).digest("hex");
+
     const user = await prisma.user.findFirst({
       where: {
-        email, // Use the email to confirm the user
-        resetToken: token,
+        email,
+        resetToken: hashedResetToken,
         resetTokenExpiry: {
-          gte: new Date(), // Ensure the token has not expired
+          gte: new Date(), // Ensure token is not expired
         },
       },
     });
 
     if (!user) {
+      // Invalid or expired token error
       throw new Error("Invalid or expired reset token.");
     }
 
     // Hash the new password
     const hashedPassword = await SecurityService.hashPassword(newPassword);
 
-    // Update the user's password and reset the token fields
+    // Update user's password and clear token fields
     await prisma.user.update({
       where: { id: user.id },
       data: {
