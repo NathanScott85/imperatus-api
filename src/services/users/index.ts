@@ -4,6 +4,14 @@ import { prisma } from "../../server";
 import SecurityService from "../security";
 import EmailService from "../email";
 import RoleService from "../roles"; // Import RoleService
+import AuthorizationTokenService from "../token";
+import { ApolloError, AuthenticationError } from "apollo-server";
+import { isAdmin, isOwner } from "../roles/role-checks";
+
+interface User {
+  id: number;
+  roles: string[];
+}
 
 class UserService {
   public async getUsers() {
@@ -22,21 +30,24 @@ class UserService {
     }
   }
 
-  public async getUserById(id: number) {
-    try {
-      return await prisma.user.findUnique({
-        where: { id },
-        include: {
-          userRoles: {
-            include: {
-              role: true,
-            },
+  public async getUserById(id: number): Promise<any | null> {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
           },
         },
-      });
-    } catch (error) {
-      throw new Error("Failed to retrieve user by ID");
-    }
+      },
+    });
+
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      roles: user.userRoles.map((userRole) => userRole.role.name),
+    };
   }
 
   public async getVerificationStatus(userId: number) {

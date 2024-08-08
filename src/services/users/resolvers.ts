@@ -13,25 +13,12 @@ import SecurityService from "../security";
 import RoleService from "../roles"; // Import RoleService
 import AuthorizationTokenService from "../token";
 import { DeleteUserArgs, DeleteUserResponse } from "../../types/user";
-
-const hasRole = (user: any, roleName: string): boolean => {
-  if (!user.roles) {
-    throw new AuthenticationError("User does not have roles assigned.");
-  }
-  return user.roles.includes(roleName);
-};
-
-const isAdmin = (user: any) => {
-  return hasRole(user, "ADMIN");
-};
-
-const isOwner = (user: any) => {
-  return hasRole(user, "OWNER");
-};
-
-const isAdminOrOwner = (user: any) => {
-  return isAdmin(user) || isOwner(user);
-};
+import {
+  hasRole,
+  isAdmin,
+  isAdminOrOwner,
+  isOwner,
+} from "../roles/role-checks";
 
 const resolvers = {
   Query: {
@@ -108,25 +95,60 @@ const resolvers = {
     },
     deleteUser: async (
       _: unknown,
-      args: DeleteUserArgs
+      args: DeleteUserArgs,
+      context: any
     ): Promise<DeleteUserResponse> => {
       const { id } = args;
+      const requestingUserId = context.user.id; // Assuming context contains the requesting user's info
 
       try {
-        // Check if the user exists
-        const user = await prisma.user.findUnique({ where: { id } });
-        if (!user) {
+        // Check if the requesting user exists and get their roles
+        const requestingUser = await UserService.getUserById(requestingUserId);
+        if (!requestingUser)
+          throw new AuthenticationError("You must be logged in");
+
+        const requestingUserRoles = await RoleService.getRolesByUserId(
+          requestingUserId
+        );
+        requestingUser.roles = requestingUserRoles.map((role) => role.name); // Add roles to the user object
+
+        // Check if the target user exists and get their roles
+        const targetUser = await UserService.getUserById(id);
+        if (!targetUser) {
           throw new ApolloError(
             `User with ID ${id} does not exist`,
             "USER_NOT_FOUND"
           );
         }
 
-        await prisma.userRole.deleteMany({ where: { userId: id } });
+        const targetUserRoles = await RoleService.getRolesByUserId(id);
+        targetUser.roles = targetUserRoles.map((role) => role.name); // Add roles to the user object
 
-        await prisma.user.delete({ where: { id } });
+        // Determine if deletion is permitted based on roles
+        if (isOwner(requestingUser)) {
+          // Owner can delete Admin and User accounts
+          if (hasRole(targetUser, "ADMIN") || hasRole(targetUser, "USER")) {
+            await UserService.deleteUser(id); // Call the service method to delete user
+            return { message: "User account deleted successfully" };
+          }
+        } else if (isAdmin(requestingUser)) {
+          // Admin can delete User accounts
+          if (hasRole(targetUser, "USER")) {
+            await UserService.deleteUser(id); // Call the service method to delete user
+            return { message: "User account deleted successfully" };
+          }
+        } else if (hasRole(requestingUser, "USER")) {
+          // User can only delete their own account
+          if (requestingUserId === id) {
+            await UserService.deleteUser(id); // Call the service method to delete user
+            return { message: "User account deleted successfully" };
+          }
+        }
 
-        return { message: "User account deleted successfully" };
+        throw new ApolloError(
+          "You do not have permission to delete this user",
+          "UNAUTHORIZED"
+        );
       } catch (error) {
         console.error("Error deleting user:", error);
         if (error instanceof ApolloError) {
@@ -135,6 +157,7 @@ const resolvers = {
         throw new ApolloError("Failed to delete user account", "DELETE_FAILED");
       }
     },
+
     requestPasswordReset: async (_: any, { email }: { email: string }) => {
       // Ensure the provided email exists in the database
       const dbUser = await UserService.findUserByEmail(email);

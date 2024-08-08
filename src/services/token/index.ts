@@ -13,17 +13,24 @@ export interface TokenPayload {
 }
 
 class AuthorizationTokenService {
-  // Generate a JWT for user authentication
   public static generateTokens(user: TokenPayload): {
     accessToken: string;
     refreshToken: string;
   } {
-    const accessToken = jwt.sign({ id: user.id, email: user.email }, access, {
-      expiresIn: ACCESS_TOKEN_EXPIRY,
-    });
-    const refreshToken = jwt.sign({ id: user.id, email: user.email }, refresh, {
-      expiresIn: REFRESH_TOKEN_EXPIRY,
-    });
+    const accessToken = jwt.sign(
+      { id: user.id, email: user.email, roles: user.roles },
+      access,
+      {
+        expiresIn: ACCESS_TOKEN_EXPIRY,
+      }
+    );
+    const refreshToken = jwt.sign(
+      { id: user.id, email: user.email, roles: user.roles },
+      refresh,
+      {
+        expiresIn: REFRESH_TOKEN_EXPIRY,
+      }
+    );
     return {
       accessToken,
       refreshToken,
@@ -35,10 +42,13 @@ class AuthorizationTokenService {
     token: string,
     type: "access" | "refresh"
   ): TokenPayload | null {
+    console.log(token, "token");
     try {
       const secret = type === "access" ? access : refresh;
+      console.log(secret, "secret");
       return jwt.verify(token, secret) as TokenPayload;
     } catch (error) {
+      console.error(error, "error");
       throw new Error("Invalid token");
     }
   }
