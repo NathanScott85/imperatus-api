@@ -164,22 +164,43 @@ const resolvers = {
         id: number;
         newPassword: string;
         oldPassword: string;
-      }
+      },
+      context: any
     ) {
       try {
         const { id, newPassword, oldPassword } = args;
+        const { refreshToken } = context;
+
+        // Verify the refresh token
+        const userFromToken = await AuthorizationTokenService.verifyToken(
+          refreshToken,
+          "refresh"
+        );
+        console.log(userFromToken, "userFromToken");
+        if (!userFromToken || userFromToken.id !== id) {
+          throw new AuthenticationError(
+            "You must be logged in or have permission to change this password"
+          );
+        }
+
+        const user = await UserService.getUserById(id);
+        if (!user) {
+          throw new Error("User not found");
+        }
+
         const response = await AuthenticationService.changeUserPassword(
           id,
           newPassword,
           oldPassword
         );
+
         return { message: response.message };
       } catch (error) {
         const errorMessage = (error as Error).message;
+        console.error("Failed to change password:", errorMessage);
         throw new Error(`Failed to change password: ${errorMessage}`);
       }
     },
-
     requestPasswordReset: async (_: any, { email }: { email: string }) => {
       // Ensure the provided email exists in the database
       const dbUser = await UserService.findUserByEmail(email);
