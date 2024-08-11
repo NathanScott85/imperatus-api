@@ -42,10 +42,9 @@ class AuthorizationTokenService {
     token: string,
     type: "access" | "refresh"
   ): TokenPayload | null {
-    console.log(token, "token");
     try {
       const secret = type === "access" ? access : refresh;
-      console.log(secret, "secret");
+
       return jwt.verify(token, secret) as TokenPayload;
     } catch (error) {
       console.error(error, "error");

@@ -49,6 +49,20 @@ class UserService {
       roles: user.userRoles.map((userRole) => userRole.role.name),
     };
   }
+  public async getCurrentPassword(id: number): Promise<any> {
+    const user = await prisma.user.findUnique({
+      where: { id }, // Use the passed in `id` directly
+      select: {
+        password: true,
+      },
+    });
+
+    if (!user || !user.password) {
+      throw new Error("Password not found for the user");
+    }
+
+    return user;
+  }
 
   public async getVerificationStatus(userId: number) {
     try {

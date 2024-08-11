@@ -67,6 +67,10 @@ const typeDefs = gql`
     message: String!
   }
 
+  type ChangePasswordResponse {
+    message: String!
+  }
+
   type VerificationStatus {
     emailVerified: Boolean!
     message: String!
@@ -81,6 +85,11 @@ const typeDefs = gql`
   type Mutation {
     createUser(input: RegisterInput!): User
     loginUser(email: String!, password: String!): AuthPayload!
+    changeUserPassword(
+      id: Int!
+      newPassword: String!
+      oldPassword: String!
+    ): ChangePasswordResponse!
     requestPasswordReset(email: String!): ResetResponse!
     resetPassword(
       token: String!

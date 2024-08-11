@@ -262,6 +262,47 @@ class AuthenticationService {
 
     return { message: "Password successfully reset" };
   }
+  public async changeUserPassword(
+    id: number,
+    newPassword: string,
+    oldPassword: string
+  ) {
+    try {
+      // 1. Validate the token
+      // 2. Get the user's current password
+      const user = await UserService.getCurrentPassword(id);
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // 3. Verify the old password
+      const isOldPasswordValid = await SecurityService.comparePassword(
+        oldPassword,
+        user.password
+      );
+
+      if (!isOldPasswordValid) {
+        throw new Error("Current password is incorrect");
+      }
+
+      // 4. Hash the new password
+      const hashedNewPassword = await SecurityService.hashPassword(newPassword);
+
+      // 5. Update the password in the database
+      await prisma.user.update({
+        where: { id: id },
+        data: { password: hashedNewPassword },
+      });
+
+      // 6. Return success message
+      return { message: "Password successfully reset" };
+    } catch (error) {
+      console.error("Error during password change:", error);
+      const errorMessage = (error as Error).message;
+      throw new Error(` ${errorMessage}`);
+    }
+  }
 }
 
 export default new AuthenticationService();

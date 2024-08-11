@@ -158,6 +158,28 @@ const resolvers = {
       }
     },
 
+    async changeUserPassword(
+      _: any,
+      args: {
+        id: number;
+        newPassword: string;
+        oldPassword: string;
+      }
+    ) {
+      try {
+        const { id, newPassword, oldPassword } = args;
+        const response = await AuthenticationService.changeUserPassword(
+          id,
+          newPassword,
+          oldPassword
+        );
+        return { message: response.message };
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        throw new Error(`Failed to change password: ${errorMessage}`);
+      }
+    },
+
     requestPasswordReset: async (_: any, { email }: { email: string }) => {
       // Ensure the provided email exists in the database
       const dbUser = await UserService.findUserByEmail(email);
@@ -375,7 +397,8 @@ const resolvers = {
       return result;
     },
 
-    refreshToken: async (parent: any, { refreshToken }: any, context: any) => {
+    refreshToken: async ({ refreshToken }: any) => {
+      console.log(refreshToken, "refreshToken");
       return await AuthorizationTokenService.refreshToken(refreshToken);
     },
 
