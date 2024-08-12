@@ -88,7 +88,7 @@ const resolvers = {
           },
         },
       });
-
+      await UserService.sendVerificationEmail(user.id);
       const userRoles = user.userRoles.map((userRole) => userRole.role.name);
 
       return { ...user, roles: userRoles };
@@ -296,7 +296,7 @@ const resolvers = {
     async sendVerificationEmail(_: any, { userId }: any) {
       try {
         const user = await UserService.getUserById(userId);
-
+        console.log(userId, "userId");
         if (!user || !user.email) {
           console.error("User not found or email not provided");
           return { message: "User not found or email not provided" };
@@ -418,7 +418,7 @@ const resolvers = {
       return result;
     },
 
-    refreshToken: async ({ refreshToken }: any) => {
+    refreshToken: async (_: unknown, { refreshToken }: any) => {
       console.log(refreshToken, "refreshToken");
       return await AuthorizationTokenService.refreshToken(refreshToken);
     },

@@ -168,9 +168,6 @@ class AuthenticationService {
     // Extract roles
     const roles = user.userRoles.map((userRole: any) => userRole.role.name);
 
-    // Send verification email
-    await UserService.sendVerificationEmail(user.id);
-
     // Generate JWT token
     const token = AuthorizationTokenService.generateTokens({
       id: user.id,
