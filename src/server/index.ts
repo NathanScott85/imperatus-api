@@ -1,4 +1,9 @@
-import { ApolloServer } from "@apollo/server";
+import {
+  ApolloServer,
+  GraphQLRequestContext,
+  GraphQLRequestListener,
+} from "@apollo/server";
+import client from "prom-client";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import express, { Request } from "express";
@@ -9,6 +14,7 @@ import PrismaService from "../services/prisma";
 import resolvers from "../services/users/resolvers";
 import typeDefs from "../services/users/typeDefs";
 import AuthorizationTokenService, { TokenPayload } from "../services/token";
+import { logger } from "../logger";
 
 export const prisma = PrismaService.getInstance();
 
@@ -23,11 +29,59 @@ export const startServer = async (): Promise<http.Server> => {
   const app = express();
   const httpServer = http.createServer(app);
 
+  const collectDefaultMetrics = client.collectDefaultMetrics;
+  collectDefaultMetrics();
+
+  const graphqlRequestsTotal = new client.Counter({
+    name: "graphql_requests_total",
+    help: "Total number of GraphQL requests",
+  });
+
+  const graphqlErrorsTotal = new client.Counter({
+    name: "graphql_errors_total",
+    help: "Total number of GraphQL errors",
+  });
+
   const server = new ApolloServer<MyContext>({
     typeDefs,
     resolvers,
     introspection: process.env.NODE_ENV !== "production",
-    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+    plugins: [
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+      {
+        async requestDidStart(
+          requestContext: GraphQLRequestContext<MyContext>
+        ): Promise<GraphQLRequestListener<MyContext>> {
+          logger.info("Request started", {
+            query: requestContext.request.query,
+            variables: requestContext.request.variables,
+          });
+          graphqlRequestsTotal.inc(); // Increment request count
+
+          return {
+            async didEncounterErrors(requestContext) {
+              logger.error("GraphQL Errors", {
+                errors: requestContext.errors,
+                query: requestContext.request.query,
+                variables: requestContext.request.variables,
+              });
+              graphqlErrorsTotal.inc(); // Increment error count
+            },
+            async willSendResponse(requestContext) {
+              const responseBody = requestContext.response.body;
+
+              // Depending on the exact structure, you might need to check if the body exists
+              // and then access the data. Assuming it's a successful response:
+              if (responseBody.kind === "single") {
+                logger.info("Response sent", {
+                  data: responseBody.singleResult.data,
+                });
+              }
+            },
+          };
+        },
+      },
+    ],
   });
 
   await server.start();
@@ -81,12 +135,12 @@ export const startServer = async (): Promise<http.Server> => {
             };
           } catch (error: unknown) {
             if (error instanceof Error) {
-              console.warn(
+              logger.warn(
                 `Unable to authenticate using token: ${accessToken}`,
                 error.message
               );
             } else {
-              console.warn("An unknown error occurred.");
+              logger.warn("An unknown error occurred.");
             }
           }
         }
@@ -95,6 +149,12 @@ export const startServer = async (): Promise<http.Server> => {
       },
     })
   );
+
+  // Expose the /metrics endpoint for Prometheus
+  app.get("/metrics", async (req, res) => {
+    res.set("Content-Type", client.register.contentType);
+    res.end(await client.register.metrics());
+  });
 
   return httpServer;
 };
