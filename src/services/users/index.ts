@@ -4,9 +4,7 @@ import { prisma } from "../../server";
 import SecurityService from "../security";
 import EmailService from "../email";
 import RoleService from "../roles"; // Import RoleService
-import AuthorizationTokenService from "../token";
-import { ApolloError, AuthenticationError } from "apollo-server";
-import { isAdmin, isOwner } from "../roles/role-checks";
+import { UserInputError } from "apollo-server";
 
 interface User {
   id: number;
@@ -233,55 +231,25 @@ class UserService {
     data: {
       fullname?: string;
       email?: string;
-      password?: string;
       dob?: string;
-      phone?: string;
-      address?: string;
-      city?: string;
-      postcode?: string;
-      roles?: string[];
     }
   ) {
-    if (data.password) {
-      data.password = await SecurityService.hashPassword(data.password);
-    }
-    if (data.dob) {
-      data.dob = new Date(data.dob).toISOString();
-    }
-
+    const { fullname, dob, email } = data;
     try {
+      if (!fullname || !email || !dob) {
+        throw new UserInputError("All fields are required.");
+      }
+
+      // Convert the string dob to a Date object
+      const dobAsDate = new Date(parseInt(dob) * 1000);
       const updatedUser = await prisma.user.update({
         where: { id },
         data: {
-          fullname: data.fullname,
-          email: data.email,
-          password: data.password,
-          dob: data.dob,
-          phone: data.phone,
-          address: data.address,
-          city: data.city,
-          postcode: data.postcode,
+          fullname: fullname,
+          email: email,
+          dob: dobAsDate, // Ensure the Date object is correctly passed to Prisma
         },
       });
-
-      if (data.roles) {
-        await prisma.userRole.deleteMany({
-          where: { userId: id },
-        });
-
-        await prisma.user.update({
-          where: { id },
-          data: {
-            userRoles: {
-              create: data.roles.map((role) => ({
-                role: {
-                  connect: { name: role },
-                },
-              })),
-            },
-          },
-        });
-      }
 
       return updatedUser;
     } catch (error) {
@@ -294,6 +262,33 @@ class UserService {
         throw new Error("Email is already in use");
       }
       throw new Error("Failed to update user");
+    }
+  }
+
+  public async updateUserAddress(
+    id: number,
+    data: {
+      phone?: string;
+      address?: string;
+      city?: string;
+      postcode?: string;
+    }
+  ) {
+    try {
+      console.log(data, "data");
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: {
+          phone: data.phone,
+          address: data.address,
+          city: data.city,
+          postcode: data.postcode,
+        },
+      });
+      console.log(updatedUser, "updatedUser");
+      return updatedUser;
+    } catch (error) {
+      throw new Error("Failed to update user address");
     }
   }
 

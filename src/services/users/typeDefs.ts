@@ -97,7 +97,14 @@ const typeDefs = gql`
       email: String!
     ): ResetResponse!
     updateUserRoles(userId: Int!, roles: [String!]!): User!
-    updateUser(id: Int!, data: UpdateUserInput!): User!
+    updateUser(id: Int!, fullname: String, email: String, dob: String): User
+    updateUserAddress(
+      id: Int!
+      phone: String
+      address: String
+      city: String
+      postcode: String
+    ): User
     sendVerificationEmail(userId: Int!): Message!
     verifyEmail(token: String!): Message!
     deleteUser(id: Int!): Message!

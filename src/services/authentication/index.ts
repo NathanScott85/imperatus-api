@@ -7,6 +7,7 @@ import AuthorizationTokenService from "../token";
 import EmailService from "../email";
 import RoleService from "../roles"; // Import RoleService
 import { createHash } from "crypto";
+import moment from "moment";
 
 interface JwtPayload {
   id: number; // Ensure this matches the type of User.id in Prisma schema
@@ -34,6 +35,11 @@ class AuthenticationService {
       throw new Error("Invalid email or password");
     }
 
+    // Format the dob before returning
+    const formattedDob = user.dob
+      ? moment(user.dob).format("YYYY-MM-DD")
+      : null;
+
     // Retrieve user's roles
     const rolesService = await RoleService.getUserRoles(user.id);
 
@@ -59,12 +65,13 @@ class AuthenticationService {
       },
     });
 
-    // Return the token and user data
+    // Return the token and user data with formatted dob
     return {
       refreshToken,
       accessToken,
       user: {
         ...user,
+        dob: formattedDob, // Use the formatted date of birth
         roles,
       },
     };

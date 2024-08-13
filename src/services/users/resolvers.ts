@@ -418,6 +418,39 @@ const resolvers = {
       return result;
     },
 
+    updateUser: async (
+      _: any,
+      args: { id: number; fullname?: string; email?: string; dob?: string },
+      context: any
+    ) => {
+      const { id, fullname, email, dob } = args;
+
+      return await UserService.updateUser(id, {
+        fullname,
+        email,
+        dob,
+      });
+    },
+    updateUserAddress: async (
+      _: any,
+      args: {
+        id: number;
+        phone?: string;
+        address?: string;
+        city?: string;
+        postcode?: string;
+      },
+      context: any
+    ) => {
+      const { id, phone, address, city, postcode } = args;
+      return await UserService.updateUserAddress(id, {
+        phone,
+        address,
+        city,
+        postcode,
+      });
+    },
+
     refreshToken: async (_: unknown, { refreshToken }: any) => {
       console.log(refreshToken, "refreshToken");
       return await AuthorizationTokenService.refreshToken(refreshToken);
