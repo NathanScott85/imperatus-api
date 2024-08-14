@@ -76,8 +76,15 @@ const typeDefs = gql`
     message: String!
   }
 
-  type Query {
+  type PaginatedUsers {
     users: [User!]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int!
+  }
+
+  type Query {
+    users(page: Int, limit: Int, search: String): PaginatedUsers!
     user(id: Int!): User
     getVerificationStatus(userId: Int!): VerificationStatus!
   }

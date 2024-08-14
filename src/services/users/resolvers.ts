@@ -23,19 +23,79 @@ import moment from "moment";
 
 const resolvers = {
   Query: {
-    users: async (_: unknown, __: unknown, { user }: any, context: any) => {
+    users: async (
+      _: unknown,
+      {
+        page = 1,
+        limit = 10,
+        search = "",
+      }: { page: number; limit: number; search: string },
+      { user }: any,
+      context: any
+    ) => {
       if (!user) throw new AuthenticationError("You must be logged in");
       if (!isAdminOrOwner(user))
         throw new AuthenticationError("Permission denied");
 
-      const users = await UserService.getUsers();
+      const offset = (page - 1) * limit;
+
+      const [users, totalCount] = await Promise.all([
+        prisma.user.findMany({
+          where: {
+            OR: [
+              {
+                fullname: {
+                  contains: search.toLowerCase(),
+                },
+              },
+              {
+                email: {
+                  contains: search.toLowerCase(),
+                },
+              },
+            ],
+          },
+          include: {
+            userRoles: {
+              include: {
+                role: true,
+              },
+            },
+          },
+          skip: offset,
+          take: limit,
+        }),
+        prisma.user.count({
+          where: {
+            OR: [
+              {
+                fullname: {
+                  contains: search.toLowerCase(),
+                },
+              },
+              {
+                email: {
+                  contains: search.toLowerCase(),
+                },
+              },
+            ],
+          },
+        }),
+      ]);
+
       const formattedUsers = users.map((user) => ({
         ...user,
         dob: user.dob ? moment(user.dob).format("YYYY-MM-DD") : null,
       }));
 
-      return formattedUsers; // Directly return the array of users
+      return {
+        users: formattedUsers,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+      };
     },
+
     user: async (_: unknown, args: { id: number }, { user }: any) => {
       if (!user) throw new AuthenticationError("You must be logged in");
       if (!isAdminOrOwner(user))

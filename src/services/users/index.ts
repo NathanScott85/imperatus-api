@@ -13,25 +13,69 @@ interface User {
 }
 
 class UserService {
-  public async getUsers() {
+  public async getUsers(
+    page: number = 1,
+    limit: number = 10,
+    search: string = ""
+  ) {
     try {
-      const users = await prisma.user.findMany({
-        include: {
-          userRoles: {
-            include: {
-              role: true,
+      const offset = (page - 1) * limit;
+
+      const [users, totalCount] = await Promise.all([
+        prisma.user.findMany({
+          where: {
+            OR: [
+              {
+                fullname: {
+                  contains: search.toLowerCase(),
+                },
+              },
+              {
+                email: {
+                  contains: search.toLowerCase(),
+                },
+              },
+            ],
+          },
+          include: {
+            userRoles: {
+              include: {
+                role: true,
+              },
             },
           },
-        },
-      });
-      const formattedUsers = users.map((user) => {
-        return {
-          ...user,
-          dob: user.dob ? moment(user.dob).format("YYYY-MM-DD") : null,
-        };
-      });
-      console.log(formattedUsers, "formattedUsers");
-      return formattedUsers;
+          skip: offset,
+          take: limit,
+        }),
+        prisma.user.count({
+          where: {
+            OR: [
+              {
+                fullname: {
+                  contains: search.toLowerCase(),
+                },
+              },
+              {
+                email: {
+                  contains: search.toLowerCase(),
+                },
+              },
+            ],
+          },
+        }),
+      ]);
+
+      const formattedUsers = users.map((user) => ({
+        ...user,
+        dob: user.dob ? moment(user.dob).format("YYYY-MM-DD") : null,
+      }));
+
+      return {
+        users: formattedUsers,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+      };
     } catch (error) {
       throw new Error("Failed to retrieve users");
     }
