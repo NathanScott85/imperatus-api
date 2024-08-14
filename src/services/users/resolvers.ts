@@ -19,6 +19,7 @@ import {
   isAdminOrOwner,
   isOwner,
 } from "../roles/role-checks";
+import moment from "moment";
 
 const resolvers = {
   Query: {
@@ -26,7 +27,14 @@ const resolvers = {
       if (!user) throw new AuthenticationError("You must be logged in");
       if (!isAdminOrOwner(user))
         throw new AuthenticationError("Permission denied");
-      return await UserService.getUsers();
+
+      const users = await UserService.getUsers();
+      const formattedUsers = users.map((user) => ({
+        ...user,
+        dob: user.dob ? moment(user.dob).format("YYYY-MM-DD") : null,
+      }));
+
+      return formattedUsers; // Directly return the array of users
     },
     user: async (_: unknown, args: { id: number }, { user }: any) => {
       if (!user) throw new AuthenticationError("You must be logged in");

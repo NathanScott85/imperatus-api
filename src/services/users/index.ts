@@ -5,6 +5,7 @@ import SecurityService from "../security";
 import EmailService from "../email";
 import RoleService from "../roles"; // Import RoleService
 import { UserInputError } from "apollo-server";
+import moment from "moment";
 
 interface User {
   id: number;
@@ -14,7 +15,7 @@ interface User {
 class UserService {
   public async getUsers() {
     try {
-      return await prisma.user.findMany({
+      const users = await prisma.user.findMany({
         include: {
           userRoles: {
             include: {
@@ -23,6 +24,14 @@ class UserService {
           },
         },
       });
+      const formattedUsers = users.map((user) => {
+        return {
+          ...user,
+          dob: user.dob ? moment(user.dob).format("YYYY-MM-DD") : null,
+        };
+      });
+      console.log(formattedUsers, "formattedUsers");
+      return formattedUsers;
     } catch (error) {
       throw new Error("Failed to retrieve users");
     }
