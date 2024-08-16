@@ -136,7 +136,7 @@ const typeDefs = gql`
       offset: Int
     ): StoreCreditHistoryResponse!
     categories: [Category!]!
-    category(id: ID!): Category
+    category(id: Int!): Category
     product(id: ID!): Product
   }
 
