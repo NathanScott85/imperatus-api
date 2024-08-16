@@ -106,24 +106,39 @@ const resolvers = {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
     },
-    storeCreditHistory: async (_: any, { userId }: { userId: number }) => {
+    storeCreditHistory: async (
+      _: any,
+      {
+        userId,
+        limit = 5,
+        offset = 0,
+      }: { userId: number; limit: number; offset: number }
+    ) => {
+      const totalCount = await prisma.storeCreditTransaction.count({
+        where: { userId },
+      });
+
       const transactions = await prisma.storeCreditTransaction.findMany({
         where: { userId },
         orderBy: { date: "desc" },
+        take: limit,
+        skip: offset,
       });
 
-      // Format the date and time using moment-timezone
       const formattedTransactions = transactions.map((transaction) => {
         return {
           ...transaction,
           date: moment(transaction.date)
             .tz("Europe/London")
             .format("YYYY-MM-DD"),
-          time: moment(transaction.date).tz("Europe/London").format("HH:mm:ss"), // Ensure time is returned
+          time: moment(transaction.date).tz("Europe/London").format("HH:mm:ss"),
         };
       });
 
-      return formattedTransactions;
+      return {
+        transactions: formattedTransactions,
+        totalCount,
+      };
     },
   },
   Mutation: {

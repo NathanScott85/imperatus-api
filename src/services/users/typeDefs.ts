@@ -26,6 +26,11 @@ const typeDefs = gql`
     balanceAfter: Float!
   }
 
+  type StoreCreditHistoryResponse {
+    transactions: [StoreCreditTransaction!]!
+    totalCount: Int!
+  }
+
   type Role {
     id: Int!
     name: String
@@ -96,7 +101,11 @@ const typeDefs = gql`
     users(page: Int, limit: Int, search: String): PaginatedUsers!
     user(id: Int!): User
     getVerificationStatus(userId: Int!): VerificationStatus!
-    storeCreditHistory(userId: Int!): [StoreCreditTransaction!]!
+    storeCreditHistory(
+      userId: Int!
+      limit: Int
+      offset: Int
+    ): StoreCreditHistoryResponse!
   }
 
   type Mutation {
