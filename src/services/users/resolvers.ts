@@ -680,6 +680,26 @@ const resolvers = {
 
       return updatedUser;
     },
+    createCategory: async (parent: any, args: any) => {
+      const { name, img } = args;
+
+      // Check if a category with the same name already exists
+      const existingCategory = await prisma.category.findUnique({
+        where: { name },
+      });
+
+      if (existingCategory) {
+        throw new UserInputError("Category already exists");
+      }
+
+      // Create the new category if it doesn't exist
+      return await prisma.category.create({
+        data: {
+          name,
+          img,
+        },
+      });
+    },
   },
 };
 
