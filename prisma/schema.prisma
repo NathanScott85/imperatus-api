@@ -18,6 +18,38 @@ model StoreCreditTransaction {
   User         User     @relation(fields: [userId], references: [id])
 }
 
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  img       String?
+  products  Product[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  Int
+  cardgame    String?
+  name        String
+  img         String?
+  price       Float
+  type        String
+  rrp         Float?
+  description String?
+  stock       Stock?  
+}
+
+model Stock {
+  id        Int      @id @default(autoincrement())
+  amount    Int
+  sold      Int
+  instock   String
+  soldout   String
+  preorder  String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int      @unique
+}
+
 model User {
   id                      Int        @id @default(autoincrement())
   email                   String     @unique

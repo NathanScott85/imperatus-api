@@ -140,6 +140,43 @@ const resolvers = {
         totalCount,
       };
     },
+    categories: async () => {
+      return await prisma.category.findMany({
+        include: {
+          products: true,
+        },
+      });
+    },
+    category: async (parent: any, args: any) => {
+      return await prisma.category.findUnique({
+        where: { id: parseInt(args.id) },
+        include: {
+          products: true,
+        },
+      });
+    },
+    product: async (parent: any, args: any) => {
+      return await prisma.product.findUnique({
+        where: { id: parseInt(args.id) },
+        include: {
+          stock: true,
+        },
+      });
+    },
+  },
+  Category: {
+    products: async (parent: any) => {
+      return await prisma.product.findMany({
+        where: { categoryId: parent.id },
+      });
+    },
+  },
+  Product: {
+    stock: async (parent: any) => {
+      return await prisma.stock.findUnique({
+        where: { productId: parent.id },
+      });
+    },
   },
   Mutation: {
     registerUser: async (_: unknown, { input }: { input: any }) => {

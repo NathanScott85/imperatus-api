@@ -18,6 +18,35 @@ const typeDefs = gql`
     storeCredit: Float!
   }
 
+  type Category {
+    id: ID!
+    name: String!
+    img: String
+    products: [Product!]!
+  }
+
+  type Product {
+    id: ID!
+    category: Category!
+    cardgame: String
+    name: String!
+    img: String
+    price: Float!
+    type: String
+    rrp: Float
+    description: String
+    stock: Stock
+  }
+
+  type Stock {
+    id: ID!
+    amount: Int!
+    sold: Int!
+    instock: String!
+    soldout: String!
+    preorder: String!
+  }
+
   type StoreCreditTransaction {
     date: String!
     time: String!
@@ -106,6 +135,9 @@ const typeDefs = gql`
       limit: Int
       offset: Int
     ): StoreCreditHistoryResponse!
+    categories: [Category!]!
+    category(id: ID!): Category
+    product(id: ID!): Product
   }
 
   type Mutation {
