@@ -102,10 +102,12 @@ const resolvers = {
         throw new AuthenticationError("Permission denied");
       return await UserService.getUserById(args.id);
     },
+
     getVerificationStatus: async (_: any, { userId }: any) => {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
     },
+
     storeCreditHistory: async (
       _: any,
       {
@@ -142,12 +144,14 @@ const resolvers = {
     },
     categories: async () => {
       return await prisma.category.findMany({
+        orderBy: { name: "asc" },
         include: {
           products: true,
         },
       });
     },
-    category: async (parent: any, args: any) => {
+
+    category: async (_: any, args: any) => {
       return await prisma.category.findUnique({
         where: { id: parseInt(args.id) },
         include: {
@@ -155,7 +159,8 @@ const resolvers = {
         },
       });
     },
-    product: async (parent: any, args: any) => {
+
+    product: async (_: any, args: any) => {
       return await prisma.product.findUnique({
         where: { id: parseInt(args.id) },
         include: {
@@ -164,6 +169,7 @@ const resolvers = {
       });
     },
   },
+
   Category: {
     products: async (parent: any) => {
       return await prisma.product.findMany({
@@ -171,6 +177,7 @@ const resolvers = {
       });
     },
   },
+
   Product: {
     stock: async (parent: any) => {
       return await prisma.stock.findUnique({
@@ -683,16 +690,22 @@ const resolvers = {
     createCategory: async (parent: any, args: any) => {
       const { name, img } = args;
 
-      // Check if a category with the same name already exists
-      const existingCategory = await prisma.category.findUnique({
-        where: { name },
+      const normalizedName = name.toLowerCase();
+      const existingCategory = await prisma.category.findFirst({
+        where: {
+          name: {
+            contains: normalizedName,
+          },
+        },
       });
 
-      if (existingCategory) {
+      if (
+        existingCategory &&
+        existingCategory.name.toLowerCase() === normalizedName
+      ) {
         throw new UserInputError("Category already exists");
       }
 
-      // Create the new category if it doesn't exist
       return await prisma.category.create({
         data: {
           name,
