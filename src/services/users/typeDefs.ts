@@ -15,6 +15,15 @@ const typeDefs = gql`
     verificationToken: String
     verificationTokenExpiry: String
     userRoles: [UserRole!]
+    storeCredit: Float!
+  }
+
+  type StoreCreditTransaction {
+    date: String!
+    time: String!
+    type: String!
+    amount: Float!
+    balanceAfter: Float!
   }
 
   type Role {
@@ -87,6 +96,7 @@ const typeDefs = gql`
     users(page: Int, limit: Int, search: String): PaginatedUsers!
     user(id: Int!): User
     getVerificationStatus(userId: Int!): VerificationStatus!
+    storeCreditHistory(userId: Int!): [StoreCreditTransaction!]!
   }
 
   type Mutation {
@@ -122,6 +132,7 @@ const typeDefs = gql`
     createRole(name: String!): Role!
     deleteRole(name: String!): Message!
     assignRoleToUser(userId: Int!, roleName: String!): Message!
+    updateUserStoreCredit(id: Int!, amount: Float!): User!
   }
 `;
 

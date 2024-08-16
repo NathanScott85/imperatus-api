@@ -7,6 +7,17 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model StoreCreditTransaction {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  date         DateTime
+  time         String  // Ensure this field exists
+  type         String
+  amount       Float
+  balanceAfter Float
+  User         User     @relation(fields: [userId], references: [id])
+}
+
 model User {
   id                      Int        @id @default(autoincrement())
   email                   String     @unique
@@ -25,6 +36,8 @@ model User {
   userRoles               UserRole[] @relation("UserRoles")
   refreshToken            String?    // Store a single refresh token directly on the User model
   refreshTokenExpiry      DateTime?  // Store the expiry date of the refresh token
+  storeCredit           Float     @default(0.0)
+  transactions StoreCreditTransaction[]
 }
 
 model Role {

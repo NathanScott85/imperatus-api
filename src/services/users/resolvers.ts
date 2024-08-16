@@ -19,7 +19,7 @@ import {
   isAdminOrOwner,
   isOwner,
 } from "../roles/role-checks";
-import moment from "moment";
+import moment from "moment-timezone";
 
 const resolvers = {
   Query: {
@@ -105,6 +105,25 @@ const resolvers = {
     getVerificationStatus: async (_: any, { userId }: any) => {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
+    },
+    storeCreditHistory: async (_: any, { userId }: { userId: number }) => {
+      const transactions = await prisma.storeCreditTransaction.findMany({
+        where: { userId },
+        orderBy: { date: "desc" },
+      });
+
+      // Format the date and time using moment-timezone
+      const formattedTransactions = transactions.map((transaction) => {
+        return {
+          ...transaction,
+          date: moment(transaction.date)
+            .tz("Europe/London")
+            .format("YYYY-MM-DD"),
+          time: moment(transaction.date).tz("Europe/London").format("HH:mm:ss"), // Ensure time is returned
+        };
+      });
+
+      return formattedTransactions;
     },
   },
   Mutation: {
@@ -558,6 +577,56 @@ const resolvers = {
         throw new AuthenticationError("Permission denied");
       }
       return await RoleService.assignRoleToUser(userId, roleName);
+    },
+
+    updateUserStoreCredit: async (
+      _: any,
+      { id, amount }: { id: number; amount: number },
+      { user }: { user: any }
+    ) => {
+      if (!user || !isOwner(user)) {
+        throw new AuthenticationError(
+          "You must be logged in to update store credit."
+        );
+      }
+
+      // Get current user
+      const existingUser = await prisma.user.findUnique({
+        where: { id },
+      });
+
+      if (!existingUser) {
+        throw new Error("User not found.");
+      }
+
+      // Calculate the new balance
+      const newBalance = amount;
+
+      // Log the transaction
+      const transactionType =
+        newBalance > existingUser.storeCredit ? "credit" : "subtraction";
+
+      // Get the current date and time as a DateTime object
+      const currentDateTime = moment().tz("Europe/London").toDate();
+
+      await prisma.storeCreditTransaction.create({
+        data: {
+          userId: id,
+          type: transactionType,
+          amount: Math.abs(amount - existingUser.storeCredit),
+          balanceAfter: newBalance,
+          date: currentDateTime, // Use the full DateTime object here
+          time: moment(currentDateTime).format("HH:mm:ss"), // Still storing time separately if required
+        },
+      });
+
+      // Update the user's store credit
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: { storeCredit: newBalance },
+      });
+
+      return updatedUser;
     },
   },
 };

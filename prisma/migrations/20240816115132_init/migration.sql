@@ -1,4 +1,16 @@
 -- CreateTable
+CREATE TABLE "StoreCreditTransaction" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "userId" INTEGER NOT NULL,
+    "date" DATETIME NOT NULL,
+    "time" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "amount" REAL NOT NULL,
+    "balanceAfter" REAL NOT NULL,
+    CONSTRAINT "StoreCreditTransaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "User" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "email" TEXT NOT NULL,
@@ -15,7 +27,8 @@ CREATE TABLE "User" (
     "verificationToken" TEXT,
     "verificationTokenExpiry" DATETIME,
     "refreshToken" TEXT,
-    "refreshTokenExpiry" DATETIME
+    "refreshTokenExpiry" DATETIME,
+    "storeCredit" REAL NOT NULL DEFAULT 0.0
 );
 
 -- CreateTable
