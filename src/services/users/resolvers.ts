@@ -1,6 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../server";
-import jwt, { Secret } from "jsonwebtoken";
 
 import {
   ApolloError,
@@ -20,8 +19,11 @@ import {
   isOwner,
 } from "../roles/role-checks";
 import moment from "moment-timezone";
+import { GraphQLUpload } from "graphql-upload-ts";
+import UploadService from "../upload";
 
 const resolvers = {
+  Upload: GraphQLUpload,
   Query: {
     users: async (
       _: unknown,
@@ -687,31 +689,34 @@ const resolvers = {
 
       return updatedUser;
     },
-    createCategory: async (parent: any, args: any) => {
+    createCategory: async (_: any, args: any, context: any) => {
       const { name, img } = args;
+
+      // Handle the image upload
+      let imgBase64 = null;
+      if (img) {
+        imgBase64 = await UploadService.processUpload(context.req, context.res);
+      }
 
       const normalizedName = name.toLowerCase();
       const existingCategory = await prisma.category.findFirst({
         where: {
-          name: {
-            contains: normalizedName,
-          },
+          name: normalizedName,
         },
       });
 
-      if (
-        existingCategory &&
-        existingCategory.name.toLowerCase() === normalizedName
-      ) {
-        throw new UserInputError("Category already exists");
+      if (existingCategory) {
+        throw new Error("Category already exists");
       }
 
-      return await prisma.category.create({
+      const category = await prisma.category.create({
         data: {
           name,
-          img,
+          img: imgBase64,
         },
       });
+
+      return category;
     },
   },
 };

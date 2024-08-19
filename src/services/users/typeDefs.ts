@@ -18,6 +18,8 @@ const typeDefs = gql`
     storeCredit: Float!
   }
 
+  scalar Upload
+
   type Category {
     id: ID!
     name: String!
@@ -174,7 +176,7 @@ const typeDefs = gql`
     deleteRole(name: String!): Message!
     assignRoleToUser(userId: Int!, roleName: String!): Message!
     updateUserStoreCredit(id: Int!, amount: Float!): User!
-    createCategory(name: String!, img: String): Category!
+    createCategory(name: String!, img: Upload): Category!
   }
 `;
 

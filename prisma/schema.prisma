@@ -1,12 +1,12 @@
 datasource db {
   provider = "postgresql"
-    url      = env("DATABASE_URL")
-    shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
-   previewFeatures = ["driverAdapters"]
+  previewFeatures = ["driverAdapters"]
 }
 
 model StoreCreditTransaction {
@@ -70,8 +70,8 @@ model User {
   userRoles               UserRole[] @relation("UserRoles")
   refreshToken            String?
   refreshTokenExpiry      DateTime?
-  storeCredit           Float     @default(0.0)
-  transactions StoreCreditTransaction[]
+  storeCredit             Float      @default(0.0)
+  transactions            StoreCreditTransaction[]
 }
 
 model Role {
