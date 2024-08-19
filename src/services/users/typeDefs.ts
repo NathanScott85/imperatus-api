@@ -128,6 +128,13 @@ const typeDefs = gql`
     currentPage: Int!
   }
 
+  type PaginatedProducts {
+    products: [Product!]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int!
+  }
+
   type Query {
     users(page: Int, limit: Int, search: String): PaginatedUsers!
     user(id: Int!): User
@@ -140,6 +147,7 @@ const typeDefs = gql`
     categories: [Category!]!
     category(id: Int!): Category
     product(id: ID!): Product
+    products(page: Int, limit: Int): PaginatedProducts!
   }
 
   type Mutation {

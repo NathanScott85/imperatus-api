@@ -161,6 +161,36 @@ const resolvers = {
         },
       });
     },
+    products: async (
+      _: unknown,
+      { page = 1, limit = 10 }: { page: number; limit: number },
+      { user }: any
+    ) => {
+      if (!user) throw new AuthenticationError("You must be logged in");
+      if (!isAdminOrOwner(user))
+        throw new AuthenticationError("Permission denied");
+
+      const offset = (page - 1) * limit;
+
+      const [products, totalCount] = await Promise.all([
+        prisma.product.findMany({
+          skip: offset,
+          take: limit,
+          include: {
+            category: true,
+            stock: true,
+          },
+        }),
+        prisma.product.count(),
+      ]);
+
+      return {
+        products, // This should be a list of Product objects
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+      };
+    },
 
     product: async (_: any, args: any) => {
       return await prisma.product.findUnique({
