@@ -1,12 +1,99 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+}
+
+model File {
+  id          Int      @id @default(autoincrement())
+  url         String
+  key         String
+  fileName    String   @unique
+  fileSize    Int
+  contentType String
+  createdAt   DateTime @default(now())
+
+  category   Category? @relation("CategoryImage", fields: [categoryId], references: [id])
+  categoryId Int?      @unique
+
+  product   Product? @relation("ProductImage", fields: [productId], references: [id])
+  productId Int?     @unique
+}
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String
+  img         File?     @relation("CategoryImage")
+  imgId       Int?      @unique
+  products    Product[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  Int
+  name        String
+  img         File?    @relation("ProductImage")
+  imgId       Int?     @unique
+  price       Float
+  type        String
+  rrp         Float?
+  description String
+  stock       Stock?
+}
+
+model Stock {
+  id        Int     @id @default(autoincrement())
+  amount    Int
+  sold      Int
+  instock   String
+  soldout   String
+  preorder  String
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int     @unique
+}
+
+model User {
+  id                      Int                      @id @default(autoincrement())
+  email                   String                   @unique
+  fullname                String
+  password                String
+  dob                     DateTime
+  phone                   String
+  address                 String
+  city                    String
+  postcode                String
+  resetToken              String?
+  resetTokenExpiry        DateTime?
+  emailVerified           Boolean                  @default(false)
+  verificationToken       String?
+  verificationTokenExpiry DateTime?
+  userRoles               UserRole[]               @relation("UserRoles")
+  refreshToken            String?
+  refreshTokenExpiry      DateTime?
+  storeCredit             Float                    @default(0.0)
+  transactions            StoreCreditTransaction[]
+}
+
+model Role {
+  id    Int        @id @default(autoincrement())
+  name  String     @unique
+  users UserRole[] @relation("UserRoles")
+}
+
+model UserRole {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  roleId Int
+  user   User @relation("UserRoles", fields: [userId], references: [id])
+  role   Role @relation("UserRoles", fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
 }
 
 model StoreCreditTransaction {
@@ -18,74 +105,4 @@ model StoreCreditTransaction {
   amount       Float
   balanceAfter Float
   User         User     @relation(fields: [userId], references: [id])
-}
-
-model Category {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  img       String?
-  products  Product[]
-}
-
-model Product {
-  id          Int      @id @default(autoincrement())
-  category    Category @relation(fields: [categoryId], references: [id])
-  categoryId  Int
-  cardgame    String?
-  name        String
-  img         String?
-  price       Float
-  type        String
-  rrp         Float?
-  description String?
-  stock       Stock?  
-}
-
-model Stock {
-  id        Int      @id @default(autoincrement())
-  amount    Int
-  sold      Int
-  instock   String
-  soldout   String
-  preorder  String
-  product   Product  @relation(fields: [productId], references: [id])
-  productId Int      @unique
-}
-
-model User {
-  id                      Int        @id @default(autoincrement())
-  email                   String     @unique
-  fullname                String
-  password                String
-  dob                     DateTime
-  phone                   String
-  address                 String
-  city                    String
-  postcode                String
-  resetToken              String?
-  resetTokenExpiry        DateTime?
-  emailVerified           Boolean    @default(false)
-  verificationToken       String?
-  verificationTokenExpiry DateTime?
-  userRoles               UserRole[] @relation("UserRoles")
-  refreshToken            String?
-  refreshTokenExpiry      DateTime?
-  storeCredit             Float      @default(0.0)
-  transactions            StoreCreditTransaction[]
-}
-
-model Role {
-  id       Int        @id @default(autoincrement())
-  name     String     @unique
-  users    UserRole[] @relation("UserRoles")
-}
-
-model UserRole {
-  id     Int  @id @default(autoincrement())
-  userId Int
-  roleId Int
-  user   User @relation("UserRoles", fields: [userId], references: [id])
-  role   Role @relation("UserRoles", fields: [roleId], references: [id])
-
-  @@unique([userId, roleId])
 }

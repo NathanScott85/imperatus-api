@@ -20,10 +20,21 @@ const typeDefs = gql`
 
   scalar Upload
 
+  type File {
+    id: ID!
+    url: String!
+    key: String!
+    fileName: String!
+    fileSize: Int!
+    contentType: String!
+    createdAt: String!
+  }
+
   type Category {
     id: ID!
     name: String!
-    img: String
+    description: String!
+    img: File
     products: [Product!]!
   }
 
@@ -32,7 +43,7 @@ const typeDefs = gql`
     category: Category!
     cardgame: String
     name: String!
-    img: String
+    img: File
     price: Float!
     type: String
     rrp: Float
@@ -184,7 +195,7 @@ const typeDefs = gql`
     deleteRole(name: String!): Message!
     assignRoleToUser(userId: Int!, roleName: String!): Message!
     updateUserStoreCredit(id: Int!, amount: Float!): User!
-    createCategory(name: String!, img: Upload): Category!
+    createCategory(name: String!, description: String!, img: Upload): Category!
   }
 `;
 

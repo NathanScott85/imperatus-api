@@ -719,13 +719,29 @@ const resolvers = {
 
       return updatedUser;
     },
-    createCategory: async (_: any, args: any, context: any) => {
-      const { name, img } = args;
+    createCategory: async (_: any, { name, description, img }: any) => {
+      let imgURL = null;
+      let imgKey = null;
+      let fileRecord = null;
 
-      // Handle the image upload
-      let imgBase64 = null;
       if (img) {
-        imgBase64 = await UploadService.processUpload(context.req, context.res);
+        const { createReadStream, filename, mimetype } = await img;
+        const stream = createReadStream();
+
+        const { s3Url, key, fileName, fileSize, contentType } =
+          await UploadService.processUpload(stream, filename, mimetype);
+        imgURL = s3Url;
+        imgKey = key;
+
+        fileRecord = await prisma.file.create({
+          data: {
+            url: imgURL,
+            key: imgKey,
+            fileName,
+            fileSize,
+            contentType,
+          },
+        });
       }
 
       const normalizedName = name.toLowerCase();
@@ -742,7 +758,8 @@ const resolvers = {
       const category = await prisma.category.create({
         data: {
           name,
-          img: imgBase64,
+          description,
+          imgId: fileRecord?.id ?? null, // Store the reference to the file
         },
       });
 

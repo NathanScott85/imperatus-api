@@ -1,21 +1,24 @@
 -- CreateTable
-CREATE TABLE "StoreCreditTransaction" (
+CREATE TABLE "File" (
     "id" SERIAL NOT NULL,
-    "userId" INTEGER NOT NULL,
-    "date" TIMESTAMP(3) NOT NULL,
-    "time" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "amount" DOUBLE PRECISION NOT NULL,
-    "balanceAfter" DOUBLE PRECISION NOT NULL,
+    "url" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "fileName" TEXT NOT NULL,
+    "fileSize" INTEGER NOT NULL,
+    "contentType" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "categoryId" INTEGER,
+    "productId" INTEGER,
 
-    CONSTRAINT "StoreCreditTransaction_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "File_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Category" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
-    "img" TEXT,
+    "description" TEXT NOT NULL,
+    "imgId" INTEGER,
 
     CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
 );
@@ -24,13 +27,12 @@ CREATE TABLE "Category" (
 CREATE TABLE "Product" (
     "id" SERIAL NOT NULL,
     "categoryId" INTEGER NOT NULL,
-    "cardgame" TEXT,
     "name" TEXT NOT NULL,
-    "img" TEXT,
+    "imgId" INTEGER,
     "price" DOUBLE PRECISION NOT NULL,
     "type" TEXT NOT NULL,
     "rrp" DOUBLE PRECISION,
-    "description" TEXT,
+    "description" TEXT NOT NULL,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
 );
@@ -88,8 +90,33 @@ CREATE TABLE "UserRole" (
     CONSTRAINT "UserRole_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "StoreCreditTransaction" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "time" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "balanceAfter" DOUBLE PRECISION NOT NULL,
+
+    CONSTRAINT "StoreCreditTransaction_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "File_categoryId_key" ON "File"("categoryId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "File_productId_key" ON "File"("productId");
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Category_imgId_key" ON "Category"("imgId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Product_imgId_key" ON "Product"("imgId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Stock_productId_key" ON "Stock"("productId");
@@ -104,7 +131,10 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 CREATE UNIQUE INDEX "UserRole_userId_roleId_key" ON "UserRole"("userId", "roleId");
 
 -- AddForeignKey
-ALTER TABLE "StoreCreditTransaction" ADD CONSTRAINT "StoreCreditTransaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "File" ADD CONSTRAINT "File_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "File" ADD CONSTRAINT "File_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -117,3 +147,6 @@ ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_userId_fkey" FOREIGN KEY ("userI
 
 -- AddForeignKey
 ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StoreCreditTransaction" ADD CONSTRAINT "StoreCreditTransaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
