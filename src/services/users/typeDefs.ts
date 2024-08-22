@@ -24,9 +24,8 @@ const typeDefs = gql`
     id: ID!
     url: String!
     key: String!
-    fileName: String!
-    fileSize: Int!
-    contentType: String!
+    filename: String!
+    contentType: String
     createdAt: String!
   }
 

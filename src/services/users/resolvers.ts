@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../server";
-
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import {
   ApolloError,
   AuthenticationError,
@@ -724,46 +724,76 @@ const resolvers = {
       let imgKey = null;
       let fileRecord = null;
 
-      if (img) {
-        const { createReadStream, filename, mimetype } = await img;
-        const stream = createReadStream();
+      try {
+        if (img) {
+          const { createReadStream, filename, mimetype } = await img;
+          const stream = createReadStream();
 
-        const { s3Url, key, fileName, fileSize, contentType } =
-          await UploadService.processUpload(stream, filename, mimetype);
-        imgURL = s3Url;
-        imgKey = key;
+          const { s3Url, key, fileName, contentType } =
+            await UploadService.processUpload(stream, filename, mimetype);
 
-        fileRecord = await prisma.file.create({
-          data: {
-            url: imgURL,
-            key: imgKey,
-            fileName,
-            fileSize,
-            contentType,
+          imgURL = s3Url;
+          imgKey = key;
+
+          fileRecord = await prisma.file.create({
+            data: {
+              url: s3Url,
+              key,
+              fileName,
+              contentType,
+            },
+          });
+        }
+
+        const normalizedName = name.toLowerCase();
+        const existingCategory = await prisma.category.findFirst({
+          where: {
+            name: normalizedName,
           },
         });
+
+        if (existingCategory) {
+          throw new Error("Category already exists");
+        }
+
+        const category = await prisma.category.create({
+          data: {
+            name,
+            description,
+            imgId: fileRecord?.id ?? null,
+          },
+        });
+
+        if (fileRecord) {
+          const imgData = {
+            id: fileRecord.id,
+            filename: fileRecord.fileName,
+            mimetype: fileRecord.contentType,
+            encoding: "7bit",
+            url: fileRecord.url,
+            key: fileRecord.key,
+          };
+          return {
+            ...category,
+            img: imgData,
+          };
+        }
+
+        return category;
+      } catch (error) {
+        if (
+          error instanceof PrismaClientKnownRequestError &&
+          error.code === "P2002" // Unique constraint error code
+        ) {
+          throw new Error(
+            "A file with this name already exists. Please choose a different name."
+          );
+        } else {
+          throw new Error(
+            "An unexpected error occurred while creating the category. Please try again."
+          );
+        }
       }
-
-      const normalizedName = name.toLowerCase();
-      const existingCategory = await prisma.category.findFirst({
-        where: {
-          name: normalizedName,
-        },
-      });
-
-      if (existingCategory) {
-        throw new Error("Category already exists");
-      }
-
-      const category = await prisma.category.create({
-        data: {
-          name,
-          description,
-          imgId: fileRecord?.id ?? null, // Store the reference to the file
-        },
-      });
-
-      return category;
     },
   },
 };

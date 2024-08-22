@@ -15,6 +15,7 @@ import resolvers from "../services/users/resolvers";
 import typeDefs from "../services/users/typeDefs";
 import AuthorizationTokenService, { TokenPayload } from "../services/token";
 import { logger } from "../logger";
+import { graphqlUploadExpress } from "graphql-upload-ts";
 
 export const prisma = PrismaService.getInstance();
 
@@ -70,8 +71,6 @@ export const startServer = async (): Promise<http.Server> => {
             async willSendResponse(requestContext) {
               const responseBody = requestContext.response.body;
 
-              // Depending on the exact structure, you might need to check if the body exists
-              // and then access the data. Assuming it's a successful response:
               if (responseBody.kind === "single") {
                 logger.info("Response sent", {
                   data: responseBody.singleResult.data,
@@ -85,6 +84,8 @@ export const startServer = async (): Promise<http.Server> => {
   });
 
   await server.start();
+
+  app.use(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }));
 
   app.use(
     "/graphql",
@@ -150,7 +151,6 @@ export const startServer = async (): Promise<http.Server> => {
     })
   );
 
-  // Expose the /metrics endpoint for Prometheus
   app.get("/metrics", async (req, res) => {
     res.set("Content-Type", client.register.contentType);
     res.end(await client.register.metrics());

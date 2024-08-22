@@ -17,7 +17,6 @@ export class UploadService {
     s3Url: string;
     key: string;
     fileName: string;
-    fileSize: number;
     contentType: string;
   }> {
     return new Promise((resolve, reject) => {
@@ -42,7 +41,6 @@ export class UploadService {
             s3Url,
             key,
             fileName: originalname,
-            fileSize: size,
             contentType: mimetype,
           });
         } catch (uploadError) {
@@ -60,7 +58,6 @@ export class UploadService {
     s3Url: string;
     key: string;
     fileName: string;
-    fileSize: number;
     contentType: string;
   }> {
     try {
@@ -80,7 +77,6 @@ export class UploadService {
         s3Url,
         key,
         fileName: filename,
-        fileSize: buffer.length,
         contentType: mimetype,
       };
     } catch (error) {

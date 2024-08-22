@@ -13,7 +13,6 @@ model File {
   url         String
   key         String
   fileName    String   @unique
-  fileSize    Int
   contentType String
   createdAt   DateTime @default(now())
 

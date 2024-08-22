@@ -4,7 +4,6 @@ CREATE TABLE "File" (
     "url" TEXT NOT NULL,
     "key" TEXT NOT NULL,
     "fileName" TEXT NOT NULL,
-    "fileSize" INTEGER NOT NULL,
     "contentType" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "categoryId" INTEGER,
@@ -102,6 +101,9 @@ CREATE TABLE "StoreCreditTransaction" (
 
     CONSTRAINT "StoreCreditTransaction_pkey" PRIMARY KEY ("id")
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "File_fileName_key" ON "File"("fileName");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "File_categoryId_key" ON "File"("categoryId");
