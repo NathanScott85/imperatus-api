@@ -16,34 +16,33 @@ model File {
   contentType String
   createdAt   DateTime @default(now())
 
-  category   Category? @relation("CategoryImage", fields: [categoryId], references: [id])
-  categoryId Int?      @unique
-
-  product   Product? @relation("ProductImage", fields: [productId], references: [id])
-  productId Int?     @unique
+  category Category? @relation("CategoryImage")
+  product  Product?  @relation("ProductImage")
 }
 
 model Category {
   id          Int       @id @default(autoincrement())
   name        String    @unique
   description String
-  img         File?     @relation("CategoryImage")
   imgId       Int?      @unique
   products    Product[]
+
+  img File? @relation("CategoryImage", fields: [imgId], references: [id])
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  category    Category @relation(fields: [categoryId], references: [id])
+  id          Int    @id @default(autoincrement())
   categoryId  Int
+  imgId       Int?   @unique
   name        String
-  img         File?    @relation("ProductImage")
-  imgId       Int?     @unique
   price       Float
   type        String
   rrp         Float?
   description String
   stock       Stock?
+
+  category Category @relation(fields: [categoryId], references: [id])
+  img      File?    @relation("ProductImage", fields: [imgId], references: [id])
 }
 
 model Stock {

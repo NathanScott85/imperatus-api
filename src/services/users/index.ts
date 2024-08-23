@@ -328,7 +328,6 @@ class UserService {
     }
   ) {
     try {
-      console.log(data, "data");
       const updatedUser = await prisma.user.update({
         where: { id },
         data: {
@@ -338,7 +337,7 @@ class UserService {
           postcode: data.postcode,
         },
       });
-      console.log(updatedUser, "updatedUser");
+
       return updatedUser;
     } catch (error) {
       throw new Error("Failed to update user address");

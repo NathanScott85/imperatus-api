@@ -24,8 +24,8 @@ const typeDefs = gql`
     id: ID!
     url: String!
     key: String!
-    filename: String!
-    contentType: String
+    fileName: String!
+    contentType: String!
     createdAt: String!
   }
 
@@ -155,7 +155,7 @@ const typeDefs = gql`
       offset: Int
     ): StoreCreditHistoryResponse!
     categories: [Category!]!
-    category(id: Int!): Category
+    category(id: ID!): Category
     product(id: ID!): Product
     products(page: Int, limit: Int): PaginatedProducts!
   }
@@ -194,7 +194,14 @@ const typeDefs = gql`
     deleteRole(name: String!): Message!
     assignRoleToUser(userId: Int!, roleName: String!): Message!
     updateUserStoreCredit(id: Int!, amount: Float!): User!
-    createCategory(name: String!, description: String!, img: Upload): Category!
+    createCategory(name: String!, description: String!, img: Upload!): Category!
+    createProduct(
+      name: String!
+      price: Float!
+      type: String!
+      description: String
+      img: Upload
+    ): Product!
   }
 `;
 

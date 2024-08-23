@@ -144,13 +144,17 @@ const resolvers = {
         totalCount,
       };
     },
+
     categories: async () => {
-      return await prisma.category.findMany({
+      const categories = await prisma.category.findMany({
         orderBy: { name: "asc" },
         include: {
+          img: true,
           products: true,
         },
       });
+
+      return categories;
     },
 
     category: async (_: any, args: any) => {
@@ -158,6 +162,7 @@ const resolvers = {
         where: { id: parseInt(args.id) },
         include: {
           products: true,
+          img: true,
         },
       });
     },
@@ -354,7 +359,7 @@ const resolvers = {
           refreshToken,
           "refresh"
         );
-        console.log(userFromToken, "userFromToken");
+
         if (!userFromToken || userFromToken.id !== id) {
           throw new AuthenticationError(
             "You must be logged in or have permission to change this password"
@@ -474,7 +479,7 @@ const resolvers = {
     async sendVerificationEmail(_: any, { userId }: any) {
       try {
         const user = await UserService.getUserById(userId);
-        console.log(userId, "userId");
+
         if (!user || !user.email) {
           console.error("User not found or email not provided");
           return { message: "User not found or email not provided" };
@@ -630,7 +635,6 @@ const resolvers = {
     },
 
     refreshToken: async (_: unknown, { refreshToken }: any) => {
-      console.log(refreshToken, "refreshToken");
       return await AuthorizationTokenService.refreshToken(refreshToken);
     },
 
@@ -720,11 +724,11 @@ const resolvers = {
       return updatedUser;
     },
     createCategory: async (_: any, { name, description, img }: any) => {
-      let imgURL = null;
-      let imgKey = null;
-      let fileRecord = null;
-
       try {
+        let imgURL = null;
+        let imgKey = null;
+        let fileRecord = null;
+
         if (img) {
           const { createReadStream, filename, mimetype } = await img;
           const stream = createReadStream();
@@ -764,35 +768,29 @@ const resolvers = {
           },
         });
 
-        if (fileRecord) {
-          const imgData = {
-            id: fileRecord.id,
-            filename: fileRecord.fileName,
-            mimetype: fileRecord.contentType,
-            encoding: "7bit",
-            url: fileRecord.url,
-            key: fileRecord.key,
-          };
-          return {
-            ...category,
-            img: imgData,
-          };
+        if (!category || !category.id) {
+          throw new Error("Failed to create category");
         }
 
-        return category;
+        return {
+          ...category,
+          img: fileRecord,
+        };
       } catch (error) {
+        console.error("Error in createCategory resolver:", error);
+
         if (
           error instanceof PrismaClientKnownRequestError &&
-          error.code === "P2002" // Unique constraint error code
+          error.code === "P2002"
         ) {
           throw new Error(
             "A file with this name already exists. Please choose a different name."
           );
-        } else {
-          throw new Error(
-            "An unexpected error occurred while creating the category. Please try again."
-          );
         }
+
+        throw new Error(
+          "An unexpected error occurred while creating the category. Please try again."
+        );
       }
     },
   },
