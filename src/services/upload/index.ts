@@ -84,6 +84,15 @@ export class UploadService {
       throw new Error(`File upload failed: ${errorMessage}`);
     }
   }
+
+  public async deleteFileFromS3(key: string): Promise<void> {
+    try {
+      await S3Service.deleteFile(key);
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      throw new Error(`File deletion failed: ${errorMessage}`);
+    }
+  }
 }
 
 export default new UploadService();

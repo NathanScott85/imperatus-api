@@ -11,6 +11,7 @@ import AuthenticationService from "../authentication";
 import SecurityService from "../security";
 import RoleService from "../roles"; // Import RoleService
 import AuthorizationTokenService from "../token";
+import CategoriesService from "../categories";
 import { DeleteUserArgs, DeleteUserResponse } from "../../types/user";
 import {
   hasRole,
@@ -20,7 +21,6 @@ import {
 } from "../roles/role-checks";
 import moment from "moment-timezone";
 import { GraphQLUpload } from "graphql-upload-ts";
-import UploadService from "../upload";
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -146,25 +146,11 @@ const resolvers = {
     },
 
     categories: async () => {
-      const categories = await prisma.category.findMany({
-        orderBy: { name: "asc" },
-        include: {
-          img: true,
-          products: true,
-        },
-      });
-
-      return categories;
+      return await CategoriesService.getAllCategories();
     },
 
     category: async (_: any, args: any) => {
-      return await prisma.category.findUnique({
-        where: { id: parseInt(args.id) },
-        include: {
-          products: true,
-          img: true,
-        },
-      });
+      return await CategoriesService.getCategoryById(args.id);
     },
     products: async (
       _: unknown,
@@ -724,73 +710,41 @@ const resolvers = {
       return updatedUser;
     },
     createCategory: async (_: any, { name, description, img }: any) => {
+      return await CategoriesService.createCategory(name, description, img);
+    },
+
+    deleteCategory: async (
+      _: unknown,
+      args: { id: string },
+      context: any
+    ): Promise<{ message: string }> => {
+      const { id } = args;
+      const requestingUserId = context.user.id;
+
       try {
-        let imgURL = null;
-        let imgKey = null;
-        let fileRecord = null;
-
-        if (img) {
-          const { createReadStream, filename, mimetype } = await img;
-          const stream = createReadStream();
-
-          const { s3Url, key, fileName, contentType } =
-            await UploadService.processUpload(stream, filename, mimetype);
-
-          imgURL = s3Url;
-          imgKey = key;
-
-          fileRecord = await prisma.file.create({
-            data: {
-              url: s3Url,
-              key,
-              fileName,
-              contentType,
-            },
-          });
-        }
-
-        const normalizedName = name.toLowerCase();
-        const existingCategory = await prisma.category.findFirst({
-          where: {
-            name: normalizedName,
-          },
+        const requestingUser = await prisma.user.findUnique({
+          where: { id: requestingUserId },
+          include: { userRoles: { include: { role: true } } },
         });
 
-        if (existingCategory) {
-          throw new Error("Category already exists");
+        if (!requestingUser) {
+          throw new AuthenticationError("You must be logged in");
         }
 
-        const category = await prisma.category.create({
-          data: {
-            name,
-            description,
-            imgId: fileRecord?.id ?? null,
-          },
-        });
+        const roles = requestingUser.userRoles.map(
+          (userRole) => userRole.role.name
+        );
 
-        if (!category || !category.id) {
-          throw new Error("Failed to create category");
-        }
-
-        return {
-          ...category,
-          img: fileRecord,
-        };
-      } catch (error) {
-        console.error("Error in createCategory resolver:", error);
-
-        if (
-          error instanceof PrismaClientKnownRequestError &&
-          error.code === "P2002"
-        ) {
-          throw new Error(
-            "A file with this name already exists. Please choose a different name."
+        if (!roles.includes("OWNER")) {
+          throw new AuthenticationError(
+            "You do not have permission to delete this category"
           );
         }
 
-        throw new Error(
-          "An unexpected error occurred while creating the category. Please try again."
-        );
+        return await CategoriesService.deleteCategory(id);
+      } catch (error) {
+        console.error("Error in deleteCategory resolver:", error);
+        throw error;
       }
     },
   },

@@ -195,6 +195,7 @@ const typeDefs = gql`
     assignRoleToUser(userId: Int!, roleName: String!): Message!
     updateUserStoreCredit(id: Int!, amount: Float!): User!
     createCategory(name: String!, description: String!, img: Upload!): Category!
+    deleteCategory(id: ID!): Message!
     createProduct(
       name: String!
       price: Float!
