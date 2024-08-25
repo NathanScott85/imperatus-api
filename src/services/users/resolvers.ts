@@ -747,6 +747,28 @@ const resolvers = {
         throw error;
       }
     },
+    updateCategory: async (
+      _: any,
+      {
+        id,
+        name,
+        description,
+        img,
+      }: { id: string; name?: string; description?: string; img?: any },
+      context: any
+    ) => {
+      const { user } = context;
+
+      if (!user) {
+        throw new AuthenticationError("Authentication required");
+      }
+
+      if (!isAdminOrOwner(user)) {
+        throw new AuthenticationError("Permission denied");
+      }
+
+      return await CategoriesService.updateCategory(id, name, description, img);
+    },
   },
 };
 

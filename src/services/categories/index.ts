@@ -136,6 +136,87 @@ class CategoriesService {
       throw new ApolloError("Failed to delete category", "DELETE_FAILED");
     }
   }
+
+  public async updateCategory(
+    id: string,
+    name?: string,
+    description?: string,
+    img?: any
+  ): Promise<any> {
+    try {
+      let imgURL = null;
+      let imgKey = null;
+      let fileRecord = null;
+
+      if (img) {
+        const { createReadStream, filename, mimetype } = await img;
+        const stream = createReadStream();
+
+        // Check if the file with the same name already exists
+        fileRecord = await prisma.file.findUnique({
+          where: { fileName: filename },
+        });
+
+        if (!fileRecord) {
+          // If file doesn't exist, process upload and create new file record
+          const { s3Url, key, fileName, contentType } =
+            await UploadService.processUpload(stream, filename, mimetype);
+
+          imgURL = s3Url;
+          imgKey = key;
+
+          fileRecord = await prisma.file.create({
+            data: {
+              url: s3Url,
+              key,
+              fileName,
+              contentType,
+            },
+          });
+        }
+      }
+
+      const existingCategory = await prisma.category.findUnique({
+        where: { id: parseInt(id) },
+      });
+
+      if (!existingCategory) {
+        throw new ApolloError("Category not found", "CATEGORY_NOT_FOUND");
+      }
+
+      await prisma.category.update({
+        where: { id: parseInt(id) },
+        data: {
+          name: name ? name : existingCategory.name,
+          description: description ? description : existingCategory.description,
+          imgId: fileRecord?.id ?? existingCategory.imgId,
+        },
+      });
+
+      // Fetch the updated category with the img relation
+      const categoryWithImg = await prisma.category.findUnique({
+        where: { id: parseInt(id) },
+        include: { img: true },
+      });
+
+      return categoryWithImg;
+    } catch (error) {
+      console.error("Error in updateCategory method:", error);
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new Error(
+          "A category with this name already exists. Please choose a different name."
+        );
+      }
+
+      throw new Error(
+        "An unexpected error occurred while updating the category. Please try again."
+      );
+    }
+  }
 }
 
 export default new CategoriesService();

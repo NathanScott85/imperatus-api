@@ -196,6 +196,12 @@ const typeDefs = gql`
     updateUserStoreCredit(id: Int!, amount: Float!): User!
     createCategory(name: String!, description: String!, img: Upload!): Category!
     deleteCategory(id: ID!): Message!
+    updateCategory(
+      id: String!
+      name: String
+      description: String
+      img: Upload
+    ): Category
     createProduct(
       name: String!
       price: Float!
