@@ -12,6 +12,8 @@ import SecurityService from "../security";
 import RoleService from "../roles"; // Import RoleService
 import AuthorizationTokenService from "../token";
 import CategoriesService from "../categories";
+import ProductsService from "../products";
+
 import { DeleteUserArgs, DeleteUserResponse } from "../../types/user";
 import {
   hasRole,
@@ -205,6 +207,11 @@ const resolvers = {
     stock: async (parent: any) => {
       return await prisma.stock.findUnique({
         where: { productId: parent.id },
+      });
+    },
+    img: async (parent: any) => {
+      return await prisma.file.findUnique({
+        where: { id: parent.imgId },
       });
     },
   },
@@ -768,6 +775,31 @@ const resolvers = {
       }
 
       return await CategoriesService.updateCategory(id, name, description, img);
+    },
+    createProduct: async (_: any, args: any) => {
+      const {
+        name,
+        price,
+        type,
+        description,
+        img,
+        categoryId,
+        stock,
+        preorder,
+        rrp,
+      } = args;
+
+      return await ProductsService.createProduct(
+        name,
+        price,
+        type,
+        description,
+        img,
+        categoryId,
+        stock,
+        preorder,
+        rrp
+      );
     },
   },
 };

@@ -18,7 +18,11 @@ class CategoriesService {
     return await prisma.category.findUnique({
       where: { id: parseInt(id) },
       include: {
-        products: true,
+        products: {
+          include: {
+            stock: true,
+          },
+        },
         img: true,
       },
     });

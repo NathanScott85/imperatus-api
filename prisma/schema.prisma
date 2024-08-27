@@ -31,18 +31,18 @@ model Category {
 }
 
 model Product {
-  id          Int    @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   categoryId  Int
-  imgId       Int?   @unique
+  imgId       Int?     @unique
   name        String
   price       Float
   type        String
+  preorder    Boolean
   rrp         Float?
   description String
   stock       Stock?
-
-  category Category @relation(fields: [categoryId], references: [id])
-  img      File?    @relation("ProductImage", fields: [imgId], references: [id])
+  category    Category @relation(fields: [categoryId], references: [id])
+  img         File?    @relation("ProductImage", fields: [imgId], references: [id])
 }
 
 model Stock {

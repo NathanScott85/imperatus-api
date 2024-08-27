@@ -40,7 +40,6 @@ const typeDefs = gql`
   type Product {
     id: ID!
     category: Category!
-    cardgame: String
     name: String!
     img: File
     price: Float!
@@ -48,6 +47,7 @@ const typeDefs = gql`
     rrp: Float
     description: String
     stock: Stock
+    preorder: Boolean!
   }
 
   type Stock {
@@ -159,6 +159,13 @@ const typeDefs = gql`
     product(id: ID!): Product
     products(page: Int, limit: Int): PaginatedProducts!
   }
+  input StockInput {
+    amount: Int!
+    sold: Int!
+    instock: String!
+    soldout: String!
+    preorder: String!
+  }
 
   type Mutation {
     createUser(input: RegisterInput!): User
@@ -202,12 +209,17 @@ const typeDefs = gql`
       description: String
       img: Upload
     ): Category
+
     createProduct(
       name: String!
       price: Float!
       type: String!
       description: String
       img: Upload
+      categoryId: Int!
+      stock: StockInput!
+      preorder: Boolean!
+      rrp: Float
     ): Product!
   }
 `;
