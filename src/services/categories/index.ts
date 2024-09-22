@@ -28,6 +28,19 @@ class CategoriesService {
     });
   }
 
+  public async getCategoryByName(name: string) {
+    return await prisma.category.findUnique({
+      where: { name },
+      include: {
+        products: {
+          include: {
+            stock: true,
+          },
+        },
+        img: true,
+      },
+    });
+  }
   public async createCategory(
     name: string,
     description: string,
@@ -156,13 +169,11 @@ class CategoriesService {
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
 
-        // Check if the file with the same name already exists
         fileRecord = await prisma.file.findUnique({
           where: { fileName: filename },
         });
 
         if (!fileRecord) {
-          // If file doesn't exist, process upload and create new file record
           const { s3Url, key, fileName, contentType } =
             await UploadService.processUpload(stream, filename, mimetype);
 
@@ -197,7 +208,6 @@ class CategoriesService {
         },
       });
 
-      // Fetch the updated category with the img relation
       const categoryWithImg = await prisma.category.findUnique({
         where: { id: parseInt(id) },
         include: { img: true },

@@ -154,14 +154,29 @@ const resolvers = {
     category: async (_: any, args: any) => {
       return await CategoriesService.getCategoryById(args.id);
     },
+    getCategoryByName: async (_: any, args: { name: string }) => {
+      try {
+        const category = await CategoriesService.getCategoryByName(args.name);
+
+        if (!category) {
+          throw new Error(`Category with name "${args.name}" not found`);
+        }
+
+        return category;
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        console.error("Failed to retrieve category by name:", errorMessage);
+        throw new Error("Failed to retrieve category by name");
+      }
+    },
     products: async (
       _: unknown,
       { page = 1, limit = 10 }: { page: number; limit: number },
       { user }: any
     ) => {
-      if (!user) throw new AuthenticationError("You must be logged in");
-      if (!isAdminOrOwner(user))
-        throw new AuthenticationError("Permission denied");
+      // if (!user) throw new AuthenticationError("You must be logged in");
+      // if (!isAdminOrOwner(user))
+      // throw new AuthenticationError("Permission denied");
 
       const offset = (page - 1) * limit;
 
@@ -185,13 +200,13 @@ const resolvers = {
       };
     },
 
-    product: async (_: any, args: any) => {
-      return await prisma.product.findUnique({
-        where: { id: parseInt(args.id) },
-        include: {
-          stock: true,
-        },
-      });
+    product: async (_: any, args: { id: string }, { user }: any) => {
+      try {
+        return await ProductsService.getProductById(parseInt(args.id));
+      } catch (error) {
+        console.error("Error in product resolver:", error);
+        throw new ApolloError("Failed to retrieve product");
+      }
     },
   },
 
@@ -800,6 +815,95 @@ const resolvers = {
         preorder,
         rrp
       );
+    },
+    updateProduct: async (
+      _: any,
+      {
+        id,
+        name,
+        price,
+        type,
+        description,
+        img,
+        categoryId,
+        stockAmount,
+        stockSold,
+        stockInstock,
+        stockSoldout,
+        stockPreorder,
+        preorder,
+        rrp,
+      }: {
+        id: string;
+        name?: string;
+        price?: number;
+        type?: string;
+        description?: string;
+        img?: any;
+        categoryId?: number; // Ensure this is a number
+        stockAmount?: number;
+        stockSold?: number;
+        stockInstock?: string;
+        stockSoldout?: string;
+        stockPreorder?: string;
+        preorder?: boolean;
+        rrp?: number;
+      },
+      { user }: any
+    ) => {
+      if (!user) {
+        throw new AuthenticationError("You must be logged in");
+      }
+
+      if (!isAdminOrOwner(user)) {
+        throw new AuthenticationError("Permission denied");
+      }
+
+      try {
+        return await ProductsService.updateProduct(
+          id,
+          name,
+          price,
+          type,
+          description,
+          img,
+          categoryId, // Pass categoryId as a number
+          {
+            amount: stockAmount,
+            sold: stockSold,
+            instock: stockInstock,
+            soldout: stockSoldout,
+            preorder: stockPreorder,
+          },
+          preorder,
+          rrp
+        );
+      } catch (error) {
+        console.error("Error in updateProduct resolver:", error);
+        throw new ApolloError("Failed to update product", "UPDATE_FAILED");
+      }
+    },
+
+    deleteProduct: async (
+      _: any,
+      args: { id: string },
+      { user }: any
+    ): Promise<{ message: string }> => {
+      if (!user) {
+        throw new AuthenticationError("You must be logged in");
+      }
+
+      // Check if the user has the necessary permissions to delete the product
+      if (!isAdminOrOwner(user)) {
+        throw new AuthenticationError("Permission denied");
+      }
+
+      try {
+        return await ProductsService.deleteProduct(args.id);
+      } catch (error) {
+        console.error("Error in deleteProduct resolver:", error);
+        throw new ApolloError("Failed to delete product", "DELETE_FAILED");
+      }
     },
   },
 };

@@ -35,10 +35,10 @@ model Product {
   categoryId  Int
   imgId       Int?     @unique
   name        String
-  price       Float
+  price       Decimal  @db.Decimal(10, 2)
   type        String
   preorder    Boolean
-  rrp         Float?
+  rrp         Decimal  @db.Decimal(10, 2)
   description String
   stock       Stock?
   category    Category @relation(fields: [categoryId], references: [id])
@@ -100,7 +100,7 @@ model StoreCreditTransaction {
   date         DateTime
   time         String
   type         String
-  amount       Float
-  balanceAfter Float
+  amount       Decimal  @db.Decimal(10, 2) // Decimal type with precision
+  balanceAfter Decimal  @db.Decimal(10, 2) // Decimal type with precision
   User         User     @relation(fields: [userId], references: [id])
 }
