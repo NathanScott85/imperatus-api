@@ -6,8 +6,6 @@ CREATE TABLE "File" (
     "fileName" TEXT NOT NULL,
     "contentType" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "categoryId" INTEGER,
-    "productId" INTEGER,
 
     CONSTRAINT "File_pkey" PRIMARY KEY ("id")
 );
@@ -26,11 +24,12 @@ CREATE TABLE "Category" (
 CREATE TABLE "Product" (
     "id" SERIAL NOT NULL,
     "categoryId" INTEGER NOT NULL,
-    "name" TEXT NOT NULL,
     "imgId" INTEGER,
-    "price" DOUBLE PRECISION NOT NULL,
+    "name" TEXT NOT NULL,
+    "price" DECIMAL(10,2) NOT NULL,
     "type" TEXT NOT NULL,
-    "rrp" DOUBLE PRECISION,
+    "preorder" BOOLEAN NOT NULL,
+    "rrp" DECIMAL(10,2) NOT NULL,
     "description" TEXT NOT NULL,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
@@ -96,20 +95,14 @@ CREATE TABLE "StoreCreditTransaction" (
     "date" TIMESTAMP(3) NOT NULL,
     "time" TEXT NOT NULL,
     "type" TEXT NOT NULL,
-    "amount" DOUBLE PRECISION NOT NULL,
-    "balanceAfter" DOUBLE PRECISION NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL,
+    "balanceAfter" DECIMAL(10,2) NOT NULL,
 
     CONSTRAINT "StoreCreditTransaction_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
 CREATE UNIQUE INDEX "File_fileName_key" ON "File"("fileName");
-
--- CreateIndex
-CREATE UNIQUE INDEX "File_categoryId_key" ON "File"("categoryId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "File_productId_key" ON "File"("productId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
@@ -133,13 +126,13 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 CREATE UNIQUE INDEX "UserRole_userId_roleId_key" ON "UserRole"("userId", "roleId");
 
 -- AddForeignKey
-ALTER TABLE "File" ADD CONSTRAINT "File_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "File" ADD CONSTRAINT "File_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Product" ADD CONSTRAINT "Product_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Stock" ADD CONSTRAINT "Stock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
