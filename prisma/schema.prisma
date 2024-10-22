@@ -16,8 +16,10 @@ model File {
   contentType String
   createdAt   DateTime @default(now())
 
-  category Category? @relation("CategoryImage")
-  product  Product?  @relation("ProductImage")
+  category Category?     @relation("CategoryImage")
+  product  Product?      @relation("ProductImage")
+  img      CarouselItem? @relation("CarouselImage")
+  logo     CarouselItem? @relation("CarouselLogo")
 }
 
 model Category {
@@ -26,8 +28,7 @@ model Category {
   description String
   imgId       Int?      @unique
   products    Product[]
-
-  img File? @relation("CategoryImage", fields: [imgId], references: [id])
+  img         File?     @relation("CategoryImage", fields: [imgId], references: [id])
 }
 
 model Product {
@@ -103,4 +104,20 @@ model StoreCreditTransaction {
   amount       Decimal  @db.Decimal(10, 2) // Decimal type with precision
   balanceAfter Decimal  @db.Decimal(10, 2) // Decimal type with precision
   User         User     @relation(fields: [userId], references: [id])
+}
+
+model CarouselItem {
+  id      Int    @id @default(autoincrement())
+  title   String
+  imageId Int?   @unique
+
+  logoId      Int?     @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations for Carousel Item image and logo
+  img  File? @relation("CarouselImage", fields: [imageId], references: [id])
+  logo File? @relation("CarouselLogo", fields: [logoId], references: [id])
 }

@@ -101,6 +101,20 @@ CREATE TABLE "StoreCreditTransaction" (
     CONSTRAINT "StoreCreditTransaction_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "CarouselItem" (
+    "id" SERIAL NOT NULL,
+    "title" TEXT NOT NULL,
+    "imageId" INTEGER,
+    "logoId" INTEGER,
+    "description" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CarouselItem_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "File_fileName_key" ON "File"("fileName");
 
@@ -125,6 +139,12 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 -- CreateIndex
 CREATE UNIQUE INDEX "UserRole_userId_roleId_key" ON "UserRole"("userId", "roleId");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "CarouselItem_imageId_key" ON "CarouselItem"("imageId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CarouselItem_logoId_key" ON "CarouselItem"("logoId");
+
 -- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -145,3 +165,9 @@ ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_roleId_fkey" FOREIGN KEY ("roleI
 
 -- AddForeignKey
 ALTER TABLE "StoreCreditTransaction" ADD CONSTRAINT "StoreCreditTransaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CarouselItem" ADD CONSTRAINT "CarouselItem_imageId_fkey" FOREIGN KEY ("imageId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CarouselItem" ADD CONSTRAINT "CarouselItem_logoId_fkey" FOREIGN KEY ("logoId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;

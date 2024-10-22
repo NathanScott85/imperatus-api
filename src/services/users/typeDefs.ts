@@ -1,5 +1,6 @@
 import { gql } from "apollo-server";
 import productTypeDefs from "../products/productTypeDefs";
+import carouselTypeDefs from "../../services/carousel/carouselTypeDefs";
 
 const typeDefs = gql`
   type User {
@@ -176,6 +177,6 @@ const typeDefs = gql`
   }
 `;
 
-const combinedTypeDefs = [typeDefs, productTypeDefs];
+const combinedTypeDefs = [typeDefs, productTypeDefs, carouselTypeDefs];
 
 export default combinedTypeDefs;
