@@ -9,39 +9,25 @@ generator client {
 }
 
 model File {
-  id          Int         @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   url         String
   key         String
-  fileName    String      @unique
+  fileName    String   @unique
   contentType String
-  createdAt   DateTime    @default(now())
-  category    Category?   @relation("CategoryImage")
-  product     Product?    @relation("ProductImage")
-  Categories  Categories? @relation("CategoriesImage")
-}
+  createdAt   DateTime @default(now())
 
-model Categories {
-  id          Int    @id @default(autoincrement())
-  name        String @unique
-  description String
-  imgId       Int?   @unique
-
-  // Relation to multiple categories
-  categories Category[] // One-to-many relation to Category
-
-  img File? @relation("CategoriesImage", fields: [imgId], references: [id])
+  category Category? @relation("CategoryImage")
+  product  Product?  @relation("ProductImage")
 }
 
 model Category {
-  id           Int         @id @default(autoincrement())
-  name         String      @unique
-  description  String
-  imgId        Int?        @unique
-  products     Product[] // A category can have many products
-  // Relation back to Categories model
-  categoriesId Int?
-  categories   Categories? @relation(fields: [categoriesId], references: [id])
-  img          File?       @relation("CategoryImage", fields: [imgId], references: [id])
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String
+  imgId       Int?      @unique
+  products    Product[]
+
+  img File? @relation("CategoryImage", fields: [imgId], references: [id])
 }
 
 model Product {

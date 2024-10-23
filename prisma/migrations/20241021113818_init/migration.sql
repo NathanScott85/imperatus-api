@@ -11,23 +11,11 @@ CREATE TABLE "File" (
 );
 
 -- CreateTable
-CREATE TABLE "Categories" (
-    "id" SERIAL NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "imgId" INTEGER,
-
-    CONSTRAINT "Categories_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Category" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "imgId" INTEGER,
-    "parentCategoryId" INTEGER,
-    "categoriesId" INTEGER NOT NULL,
 
     CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
 );
@@ -117,12 +105,6 @@ CREATE TABLE "StoreCreditTransaction" (
 CREATE UNIQUE INDEX "File_fileName_key" ON "File"("fileName");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Categories_name_key" ON "Categories"("name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Categories_imgId_key" ON "Categories"("imgId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
 
 -- CreateIndex
@@ -142,15 +124,6 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserRole_userId_roleId_key" ON "UserRole"("userId", "roleId");
-
--- AddForeignKey
-ALTER TABLE "Categories" ADD CONSTRAINT "Categories_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_parentCategoryId_fkey" FOREIGN KEY ("parentCategoryId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_categoriesId_fkey" FOREIGN KEY ("categoriesId") REFERENCES "Categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
