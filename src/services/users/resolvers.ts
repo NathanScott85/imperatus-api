@@ -23,6 +23,7 @@ import {
 } from "../roles/role-checks";
 import moment from "moment-timezone";
 import { GraphQLUpload } from "graphql-upload-ts";
+import cardGameResolvers from "../cardgames/cardGameResolvers";
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -219,6 +220,11 @@ const resolvers = {
   },
 
   Product: {
+    category: async (parent: any) => {
+      return await prisma.category.findUnique({
+        where: { id: parent.categoryId },
+      });
+    },
     stock: async (parent: any) => {
       return await prisma.stock.findUnique({
         where: { productId: parent.id },
@@ -231,6 +237,7 @@ const resolvers = {
     },
   },
   Mutation: {
+    ...cardGameResolvers.Mutation,
     registerUser: async (_: unknown, { input }: { input: any }) => {
       const { fullname, email, password, dob, phone, address, city, postcode } =
         input;

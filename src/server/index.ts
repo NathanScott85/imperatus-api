@@ -12,7 +12,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import PrismaService from "../services/prisma";
 import resolvers from "../services/users/resolvers";
-import typeDefs from "../services/users/typeDefs";
+import combinedTypeDefs from "../services/users/typeDefs";
 import AuthorizationTokenService, { TokenPayload } from "../services/token";
 import { logger } from "../logger";
 import { graphqlUploadExpress } from "graphql-upload-ts";
@@ -44,7 +44,7 @@ export const startServer = async (): Promise<http.Server> => {
   });
 
   const server = new ApolloServer<MyContext>({
-    typeDefs,
+    typeDefs: combinedTypeDefs,
     resolvers,
     introspection: process.env.NODE_ENV !== "production",
     plugins: [
