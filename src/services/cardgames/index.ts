@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 class CardGamesService {
   public async getAllCardGames() {
     return await prisma.product.findMany({
-      where: { type: 'card-game' },
+      // where: { type: "CARDGAME" },
       include: {
         category: true,
         stock: true,
@@ -21,15 +21,14 @@ class CardGamesService {
       const cardGame = await prisma.product.findUnique({
         where: { id },
         include: {
-          stock: true,
           img: true,
           category: true,
         },
       });
 
-      if (!cardGame || cardGame.type !== "card-game") {
-        throw new Error("Card game not found");
-      }
+      // if (!cardGame || cardGame.type !== "CARDGAME") {
+      //   throw new Error("Card game not found");
+      // }
 
       return cardGame;
     } catch (error) {
@@ -42,26 +41,25 @@ class CardGamesService {
     try {
       const offset = (page - 1) * limit;
 
-      const [cardGames, totalCount] = await Promise.all([
-        prisma.product.findMany({
-          skip: offset,
-          take: limit,
-          where: { type: "card-game" },
-          include: {
-            category: true,
-            stock: true,
-            img: true,
-          },
-        }),
-        prisma.product.count({ where: { type: "card-game" } }),
-      ]);
+      // const [cardGames, totalCount] = await Promise.all([
+      //   prisma.product.findMany({
+      //     skip: offset,
+      //     take: limit,
+      //     // where: { type: "CARDGAME" },
+      //     include: {
+      //       category: true,
+      //       img: true,
+      //     },
+      //   }),
+      // prisma.product.count({ where: { type: "CARDGAME" } }),
+      // ]);
 
-      return {
-        cardGames,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        currentPage: page,
-      };
+      // return {
+      //   cardGames,
+      //   totalCount,
+      //   totalPages: Math.ceil(totalCount / limit),
+      //   currentPage: page,
+      // };
     } catch (error) {
       console.error("Error in getCardGames:", error);
       throw new Error("Failed to retrieve card games");
@@ -70,23 +68,11 @@ class CardGamesService {
 
   public async createCardGame(
     name: string,
-    price: number,
     description: string,
     img: any,
-    categoryId: number,
-    stock: {
-      amount: number;
-      sold: number;
-      instock: string;
-      soldout: string;
-      preorder: string;
-    },
-    preorder: boolean,
-    rrp: number
+    categoryId: number
   ): Promise<any> {
     try {
-      let imgURL = null;
-      let imgKey = null;
       let fileRecord = null;
 
       if (img) {
@@ -95,9 +81,6 @@ class CardGamesService {
 
         const { s3Url, key, fileName, contentType } =
           await UploadService.processUpload(stream, filename, mimetype);
-
-        imgURL = s3Url;
-        imgKey = key;
 
         fileRecord = await prisma.file.create({
           data: {
@@ -114,52 +97,30 @@ class CardGamesService {
       const existingCardGame = await prisma.product.findFirst({
         where: {
           name: normalizedName,
-          type: "card-game",
+          // type: "CARDGAME",
         },
       });
 
       if (existingCardGame) {
-        console.error(
-          "Card game with the same name already exists:",
-          existingCardGame
-        );
         throw new Error("Card game already exists");
       }
 
-      const cardGame = await prisma.product.create({
-        data: {
-          name,
-          price,
-          type: "card-game",
-          description,
-          preorder,
-          rrp,
-          imgId: fileRecord?.id ?? null,
-          categoryId,
-          stock: {
-            create: {
-              amount: stock.amount,
-              sold: stock.sold,
-              instock: stock.instock,
-              soldout: stock.soldout,
-              preorder: stock.preorder,
-            },
-          },
-        },
-        include: {
-          category: true,
-          img: true,
-          stock: true,
-        },
-      });
-
-      if (!cardGame || !cardGame.id) {
-        console.error("Failed to create card game in database");
-        throw new Error("Failed to create card game");
-      }
+      // const cardGame = await prisma.product.create({
+      //   data: {
+      //     name,
+      //     type: "CARDGAME",
+      //     description,
+      //     imgId: fileRecord?.id ?? null,
+      //     categoryId,
+      //   },
+      //   include: {
+      //     category: true,
+      //     img: true,
+      //   },
+      // });
 
       return {
-        ...cardGame,
+        // ...cardGame,
         img: fileRecord,
       };
     } catch (error) {
@@ -168,7 +129,6 @@ class CardGamesService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        console.error("Prisma error: Unique constraint violation");
         throw new Error(
           "A card game with this name already exists. Please choose a different name."
         );
@@ -183,83 +143,50 @@ class CardGamesService {
   public async updateCardGame(
     id: string,
     name?: string,
-    price?: number,
     description?: string,
     img?: any,
-    categoryId?: number,
-    stock?: {
-      amount?: number;
-      sold?: number;
-      instock?: string;
-      soldout?: string;
-      preorder?: string;
-    },
-    preorder?: boolean,
-    rrp?: number
+    categoryId?: number
   ): Promise<any> {
     try {
-      let imgURL = null;
-      let imgKey = null;
       let fileRecord = null;
-  
-      // Handle image upload if provided
+
       if (img) {
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
-  
+
         fileRecord = await prisma.file.findUnique({
           where: { fileName: filename },
         });
-  
+
         if (!fileRecord) {
-          // If file doesn't exist, process upload and create new file record
           const { s3Url, key, fileName, contentType } =
             await UploadService.processUpload(stream, filename, mimetype);
-  
-          imgURL = s3Url;
-          imgKey = key;
-  
+
           fileRecord = await prisma.file.create({
             data: {
-              url: imgURL,
-              key: imgKey,
+              url: s3Url,
+              key,
               fileName,
               contentType,
             },
           });
         }
       }
-  
-      // Update the card game record
+
       const cardGame = await prisma.product.update({
         where: { id: parseInt(id) },
         data: {
           name: name ?? undefined,
-          price: price ?? undefined,
           description: description ?? undefined,
-          preorder: preorder ?? undefined,
-          rrp: rrp ?? undefined,
           imgId: fileRecord?.id ?? undefined,
           categoryId: categoryId ?? undefined,
-          stock: stock
-            ? {
-                update: {
-                  amount: stock.amount ?? undefined,
-                  sold: stock.sold ?? undefined,
-                  instock: stock.instock ?? undefined,
-                  soldout: stock.soldout ?? undefined,
-                  preorder: stock.preorder ?? undefined,
-                },
-              }
-            : undefined,
         },
         include: {
           category: true,
           img: true,
-          stock: true,
         },
       });
-  
+
       return {
         ...cardGame,
         img: fileRecord,
@@ -274,19 +201,18 @@ class CardGamesService {
           "A card game with this name already exists. Please choose a different name."
         );
       }
-  
+
       throw new Error(
         "An unexpected error occurred while updating the card game. Please try again."
       );
     }
-  }  
-
+  }
 
   public async deleteCardGame(id: string) {
     try {
       const cardGame = await prisma.product.findUnique({
         where: { id: parseInt(id) },
-        include: { img: true, stock: true },
+        include: { img: true },
       });
 
       if (!cardGame) {
@@ -294,12 +220,6 @@ class CardGamesService {
           `Card game with ID ${id} does not exist`,
           "CARD_GAME_NOT_FOUND"
         );
-      }
-
-      if (cardGame.stock) {
-        await prisma.stock.delete({
-          where: { productId: cardGame.id },
-        });
       }
 
       if (cardGame.img) {

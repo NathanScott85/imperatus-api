@@ -1,56 +1,67 @@
 import { gql } from 'apollo-server';
 
 const cardGameTypeDefs = gql`
+  type File {
+    id: ID!
+    url: String!
+    key: String!
+    fileName: String!
+    contentType: String!
+    createdAt: String!
+  }
+
+  type ProductType {
+    id: ID!
+    name: String!
+    products: [Product!]!
+}
+
+ type Category {
+    id: ID!
+    name: String!
+    description: String
+    img: File
+    parent: Category
+    subCategories: [Category]
+    products: [Product] # Product relation within Category
+  }
+
   type CardGame {
     id: ID!
     name: String!
-    price: Float!
     description: String!
-    preorder: Boolean!
-    rrp: Float!
-    category: Category
-    stock: Stock
+    category: Category!
     img: File
+    type: ProductType! # Ensure we are consistent with ProductType enum if necessary
   }
 
   type Query {
-    getAllCardGames: [CardGame!]!    # <-- Define the query here
+    getAllCardGames: [CardGame!]!
     cardGame(id: ID!): CardGame
+     getCardGameById(id: ID!): CardGame
   }
 
   type Mutation {
-      createCardGame(                   # Define the mutation here
+    createCardGame(
       name: String!
-      price: Float!
       description: String!
       img: Upload!
       categoryId: Int!
-      stock: StockInput!
-      preorder: Boolean!
-      rrp: Float!
     ): CardGame!
 
     updateCardGame(
       id: ID!
       name: String
-      price: Float
       description: String
       img: Upload
       categoryId: Int
-      stock: StockInput
-      preorder: Boolean
-      rrp: Float
     ): CardGame!
 
     deleteCardGame(id: ID!): Message!
   }
 
-  input StockInput {
-    amount: Int
-    sold: Int
-    instock: String
-    soldout: String
-    preorder: String
+  type Message {
+    message: String!
   }
 `;
 

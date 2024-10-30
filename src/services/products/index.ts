@@ -1,32 +1,11 @@
-import { Prisma, PrismaClient } from "@prisma/client";
-import UploadService from "../upload"; // Assume you have a service to handle S3 uploads
+import { Prisma, PrismaClient, ProductType } from "@prisma/client";
+import UploadService from "../upload";
 import { ApolloError } from "apollo-server";
 
 const prisma = new PrismaClient();
 
 class ProductsService {
-  public async getProductById(id: number) {
-    try {
-      const product = await prisma.product.findUnique({
-        where: { id },
-        include: {
-          stock: true,
-          img: true,
-          category: true,
-        },
-      });
-
-      if (!product) {
-        throw new Error("Product not found");
-      }
-
-      return product;
-    } catch (error) {
-      console.error("Error in getProductById:", error);
-      throw new Error("Failed to retrieve product");
-    }
-  }
-  public async getProducts(page: number = 1, limit: number = 10) {
+  public async getAllProducts(page: number = 1, limit: number = 10) {
     try {
       const offset = (page - 1) * limit;
 
@@ -38,6 +17,7 @@ class ProductsService {
             category: true,
             stock: true,
             img: true,
+            type: true,
           },
         }),
         prisma.product.count(),
@@ -54,10 +34,58 @@ class ProductsService {
       throw new Error("Failed to retrieve products");
     }
   }
+
+  public async getAllProductTypes() {
+    try {
+      const productTypes = await prisma.productType.findMany();
+      return productTypes;
+    } catch (error) {
+      console.error("Error retrieving product types:", error);
+      throw new Error("Failed to retrieve product types");
+    }
+  }
+
+  public async getProductById(id: number) {
+    try {
+      const product = await prisma.product.findUnique({
+        where: { id },
+        include: {
+          stock: true,
+          img: true,
+          category: true,
+          type: true
+        },
+      });
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      return product;
+    } catch (error) {
+      console.error("Error in getProductById:", error);
+      throw new Error("Failed to retrieve product");
+    }
+  }
+
+  async createProductType(name: string) {
+    const existingType = await prisma.productType.findUnique({
+      where: { name },
+    });
+
+    if (existingType) {
+      throw new Error("Product type already exists.");
+    }
+
+    return await prisma.productType.create({
+      data: { name },
+    });
+  }
+
   public async createProduct(
     name: string,
     price: number,
-    type: string,
+    productTypeId: number,
     description: string,
     img: any,
     categoryId: number,
@@ -66,61 +94,46 @@ class ProductsService {
       sold: number;
       instock: string;
       soldout: string;
-      preorder: string;
+      preorder: boolean;
     },
     preorder: boolean,
     rrp: number
   ): Promise<any> {
     try {
-      let imgURL = null;
-      let imgKey = null;
-      let fileRecord = null;
-
-      if (img) {
-        const { createReadStream, filename, mimetype } = await img;
-        const stream = createReadStream();
-
-        const { s3Url, key, fileName, contentType } =
-          await UploadService.processUpload(stream, filename, mimetype);
-
-        imgURL = s3Url;
-        imgKey = key;
-
-        fileRecord = await prisma.file.create({
-          data: {
-            url: s3Url,
-            key,
-            fileName,
-            contentType,
-          },
-        });
-      }
-
-      const normalizedName = name.toLowerCase();
-
-      const existingProduct = await prisma.category.findFirst({
+      // Check for existing product first
+      const existingProduct = await prisma.product.findFirst({
         where: {
-          name: normalizedName,
+          name: name.toLowerCase(),
         },
       });
 
       if (existingProduct) {
-        console.error(
-          "Product with the same name already exists:",
-          existingProduct
-        );
-        throw new Error("Product already exists");
+        throw new Error("A product with this name already exists. Please choose a different name.");
       }
 
+      // Check if the image already exists
+      if (img) {
+        const { filename } = await img; // Extract filename from the img
+        const existingImage = await prisma.file.findFirst({
+          where: {
+            fileName: filename,
+          },
+        });
+
+        if (existingImage) {
+          throw new Error("An image with this name already exists. Please choose a different image.");
+        }
+      }
+
+      // Create the product without the file
       const product = await prisma.product.create({
         data: {
           name,
           price,
-          type,
+          productTypeId,
           description,
           preorder,
           rrp,
-          imgId: fileRecord?.id ?? null,
           categoryId,
           stock: {
             create: {
@@ -134,20 +147,47 @@ class ProductsService {
         },
         include: {
           category: true,
-          img: true,
           stock: true,
+          type: true, // Include product type for returning
         },
       });
 
-      if (!product || !product.id) {
-        console.error("Failed to create product in database");
-        throw new Error("Failed to create product");
+      console.log("Product created successfully:", product);
+
+      // Now, if there's an image, upload it
+      let fileRecord = null;
+
+      if (img) {
+        const { createReadStream, filename, mimetype } = await img;
+        const stream = createReadStream();
+
+        const { s3Url, key, fileName, contentType } =
+          await UploadService.processUpload(stream, filename, mimetype);
+
+        // Create the file record
+        fileRecord = await prisma.file.create({
+          data: {
+            url: s3Url,
+            key,
+            fileName,
+            contentType,
+          },
+        });
+
+        // Update the product with the file information
+        await prisma.product.update({
+          where: { id: product.id },
+          data: {
+            imgId: fileRecord.id, // Associate the file with the product
+          },
+        });
+
+        console.log('File uploaded and product updated with file information.');
       }
 
-      // Format price and rrp
       return {
         ...product,
-        img: fileRecord,
+        img: fileRecord, // Attach the file record to the response
       };
     } catch (error) {
       console.error("Error in createProduct method:", error);
@@ -155,22 +195,20 @@ class ProductsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        console.error("Prisma error: Unique constraint violation");
-        throw new Error(
-          "A product with this name already exists. Please choose a different name."
-        );
+        throw new Error("A product with this name already exists. Please choose a different name.");
       }
 
-      throw new Error(
-        "An unexpected error occurred while creating the product. Please try again."
-      );
+      throw new Error("An unexpected error occurred while creating the product. Please try again.");
     }
   }
+
+
+
   public async updateProduct(
     id: string,
     name?: string,
     price?: number,
-    type?: string,
+    productTypeId?: number,
     description?: string,
     img?: any,
     categoryId?: number,
@@ -185,8 +223,6 @@ class ProductsService {
     rrp?: number
   ): Promise<any> {
     try {
-      let imgURL = null;
-      let imgKey = null;
       let fileRecord = null;
 
       if (img) {
@@ -198,12 +234,8 @@ class ProductsService {
         });
 
         if (!fileRecord) {
-          // If file doesn't exist, process upload and create new file record
           const { s3Url, key, fileName, contentType } =
             await UploadService.processUpload(stream, filename, mimetype);
-
-          imgURL = s3Url;
-          imgKey = key;
 
           fileRecord = await prisma.file.create({
             data: {
@@ -215,12 +247,13 @@ class ProductsService {
           });
         }
       }
+
       const product = await prisma.product.update({
         where: { id: parseInt(id) },
         data: {
           name: name ?? undefined,
           price: price ?? undefined,
-          type: type ?? undefined,
+          productTypeId: productTypeId ?? undefined, // Use productTypeId here
           description: description ?? undefined,
           preorder: preorder ?? undefined,
           rrp: rrp ?? undefined,
@@ -228,20 +261,21 @@ class ProductsService {
           categoryId: categoryId ?? undefined,
           stock: stock
             ? {
-                update: {
-                  amount: stock.amount ?? undefined,
-                  sold: stock.sold ?? undefined,
-                  instock: stock.instock ?? undefined,
-                  soldout: stock.soldout ?? undefined,
-                  preorder: stock.preorder ?? undefined,
-                },
-              }
+              update: {
+                amount: stock.amount ?? undefined,
+                sold: stock.sold ?? undefined,
+                instock: stock.instock ?? undefined,
+                soldout: stock.soldout ?? undefined,
+                preorder: stock.preorder ? true : false,
+              },
+            }
             : undefined,
         },
         include: {
           category: true,
           img: true,
           stock: true,
+          type: true, // Include product type for returning
         },
       });
 

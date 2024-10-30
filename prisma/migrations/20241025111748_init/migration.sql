@@ -1,3 +1,6 @@
+-- CreateEnum
+CREATE TYPE "ProductType" AS ENUM ('CARDGAME', 'BOARDGAME', 'ACCESSORY', 'BOARDGAMES');
+
 -- CreateTable
 CREATE TABLE "File" (
     "id" SERIAL NOT NULL,
@@ -16,23 +19,24 @@ CREATE TABLE "Category" (
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "imgId" INTEGER,
+    "parentId" INTEGER,
 
     CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "Product" (
+CREATE TABLE "products" (
     "id" SERIAL NOT NULL,
     "categoryId" INTEGER NOT NULL,
     "imgId" INTEGER,
     "name" TEXT NOT NULL,
-    "price" DECIMAL(10,2) NOT NULL,
-    "type" TEXT NOT NULL,
-    "preorder" BOOLEAN NOT NULL,
-    "rrp" DECIMAL(10,2) NOT NULL,
+    "price" DECIMAL(10,2),
+    "type" "ProductType" NOT NULL,
+    "preorder" BOOLEAN,
+    "rrp" DECIMAL(10,2),
     "description" TEXT NOT NULL,
 
-    CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "products_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -111,7 +115,7 @@ CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
 CREATE UNIQUE INDEX "Category_imgId_key" ON "Category"("imgId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Product_imgId_key" ON "Product"("imgId");
+CREATE UNIQUE INDEX "products_imgId_key" ON "products"("imgId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Stock_productId_key" ON "Stock"("productId");
@@ -126,16 +130,19 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 CREATE UNIQUE INDEX "UserRole_userId_roleId_key" ON "UserRole"("userId", "roleId");
 
 -- AddForeignKey
+ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "products" ADD CONSTRAINT "products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Product" ADD CONSTRAINT "Product_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "products" ADD CONSTRAINT "products_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Stock" ADD CONSTRAINT "Stock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Stock" ADD CONSTRAINT "Stock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -9,15 +9,14 @@ generator client {
 }
 
 model File {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   url         String
   key         String
-  fileName    String   @unique
+  fileName    String    @unique
   contentType String
-  createdAt   DateTime @default(now())
-
-  category Category? @relation("CategoryImage")
-  product  Product?  @relation("ProductImage")
+  createdAt   DateTime  @default(now())
+  category    Category? @relation("CategoryImage")
+  product     Product?  @relation("ProductImage")
 }
 
 model Category {
@@ -25,24 +24,26 @@ model Category {
   name        String    @unique
   description String
   imgId       Int?      @unique
-  products    Product[]
-
-  img File? @relation("CategoryImage", fields: [imgId], references: [id])
+  products    Product[] @relation("CategoryProducts")
+  img         File?     @relation("CategoryImage", fields: [imgId], references: [id])
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  categoryId  Int
-  imgId       Int?     @unique
-  name        String
-  price       Decimal  @db.Decimal(10, 2)
-  type        String
-  preorder    Boolean
-  rrp         Decimal  @db.Decimal(10, 2)
-  description String
-  stock       Stock?
-  category    Category @relation(fields: [categoryId], references: [id])
-  img         File?    @relation("ProductImage", fields: [imgId], references: [id])
+  id            Int         @id @default(autoincrement())
+  categoryId    Int
+  imgId         Int?        @unique
+  name          String
+  price         Decimal?    @db.Decimal(10, 2)
+  type          ProductType @relation(fields: [productTypeId], references: [id])
+  preorder      Boolean?
+  rrp           Decimal?    @db.Decimal(10, 2)
+  description   String
+  category      Category    @relation("CategoryProducts", fields: [categoryId], references: [id])
+  img           File?       @relation("ProductImage", fields: [imgId], references: [id])
+  stock         Stock?      @relation("ProductStock")
+  productTypeId Int // Foreign key for product type
+
+  @@map("products")
 }
 
 model Stock {
@@ -51,9 +52,15 @@ model Stock {
   sold      Int
   instock   String
   soldout   String
-  preorder  String
-  product   Product @relation(fields: [productId], references: [id])
+  preorder  Boolean
+  product   Product @relation("ProductStock", fields: [productId], references: [id])
   productId Int     @unique
+}
+
+model ProductType {
+  id      Int       @id @default(autoincrement())
+  name    String    @unique
+  Product Product[]
 }
 
 model User {
@@ -100,7 +107,7 @@ model StoreCreditTransaction {
   date         DateTime
   time         String
   type         String
-  amount       Decimal  @db.Decimal(10, 2) // Decimal type with precision
-  balanceAfter Decimal  @db.Decimal(10, 2) // Decimal type with precision
+  amount       Decimal  @db.Decimal(10, 2)
+  balanceAfter Decimal  @db.Decimal(10, 2)
   User         User     @relation(fields: [userId], references: [id])
 }
