@@ -2,8 +2,26 @@ import { AuthenticationError } from "apollo-server";
 import { prisma } from "../../server";
 import CategoriesService from "../categories";
 import { isAdminOrOwner } from "../roles/role-checks";
+import products from "../products";
 
 const categoriesResolvers = {
+  Category: {
+    products: async (parent: any) => {
+      return await prisma.product.findUnique({
+        where: { id: parent.categoryId },
+      });
+    },
+    stock: async (parent: any) => {
+      return await prisma.stock.findUnique({
+        where: { productId: parent.id },
+      });
+    },
+    img: async (parent: any) => {
+      return await prisma.file.findUnique({
+        where: { id: parent.imgId },
+      });
+    },
+  },
   Query: {
     getAllCategories: async () => {
       return await CategoriesService.getAllCategories();
@@ -26,7 +44,6 @@ const categoriesResolvers = {
         throw new Error("Failed to retrieve category by name");
       }
     },
-
   },
   Mutation: {
     createCategory: async (_: any, { name, description, img }: any) => {
