@@ -16,9 +16,6 @@ import ProductsService from "../products";
 
 import { DeleteUserArgs, DeleteUserResponse } from "../../types/user";
 import {
-  hasRole,
-  isAdmin,
-  isAdminOrOwner,
   isOwner,
 } from "../roles/role-checks";
 import moment from "moment-timezone";
@@ -34,6 +31,7 @@ const resolvers = {
     ...cardGameResolvers.Query,
     ...categoriesResolvers.Query,
     ...productResolvers.Query,
+    ...userResolvers.Query,
     getVerificationStatus: async (_: any, { userId }: any) => {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
