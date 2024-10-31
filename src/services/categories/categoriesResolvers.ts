@@ -2,7 +2,6 @@ import { AuthenticationError } from "apollo-server";
 import { prisma } from "../../server";
 import CategoriesService from "../categories";
 import { isAdminOrOwner } from "../roles/role-checks";
-import products from "../products";
 
 const categoriesResolvers = {
   Category: {
@@ -23,8 +22,8 @@ const categoriesResolvers = {
     },
   },
   Query: {
-    getAllCategories: async () => {
-      return await CategoriesService.getAllCategories();
+    getAllCategories: async (_: any, { page = 1, limit = 10 }) => {
+      return await CategoriesService.getAllCategories(page, limit);
     },
     getCategoryById: async (_: any, args: any) => {
       return await CategoriesService.getCategoryById(args.id);

@@ -20,9 +20,17 @@ const categoryTypeDefs = gql`
     products: [Product!]! # Product relation within Category
   }
 
+  type PaginatedCategories {
+    categories: [Category!]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int!
+}
+
+
   # Queries and Mutations for Categories
   type Query {
-    getAllCategories: [Category!]!
+    getAllCategories(page: Int, limit: Int): PaginatedCategories!
     getCategoryById(id: ID!): Category
     getCategoryByName(name: String!): Category
   }

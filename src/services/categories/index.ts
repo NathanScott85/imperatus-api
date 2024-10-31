@@ -4,18 +4,32 @@ import UploadService from "../upload";
 import { prisma } from "../../server";
 
 class CategoriesService {
-  public async getAllCategories() {
-    return await prisma.category.findMany({
-      include: {
-        img: true,
-        products: {
-          include: {
-            stock: true,
-            img: true
+  public async getAllCategories(page: number = 1, limit: number = 10) {
+    const offset = (page - 1) * limit;
+
+    const [categories, totalCount] = await Promise.all([
+      prisma.category.findMany({
+        skip: offset,
+        take: limit,
+        include: {
+          img: true,
+          products: {
+            include: {
+              stock: true,
+              img: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.category.count(), // Get total count of categories
+    ]);
+
+    return {
+      categories,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+    };
   }
 
   public async getCategoryById(id: string) {
