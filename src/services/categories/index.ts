@@ -4,17 +4,36 @@ import UploadService from "../upload";
 import { prisma } from "../../server";
 
 class CategoriesService {
-  public async getAllCategories() {
-    return await prisma.category.findMany({
-      orderBy: { name: "asc" },
-      include: {
-        img: true,
-        products: true,
-      },
-    });
+  public async getAllCategories(page: number = 1, limit: number = 10) {
+    const offset = (page - 1) * limit;
+
+    const [categories, totalCount] = await Promise.all([
+      prisma.category.findMany({
+        skip: offset,
+        take: limit,
+        include: {
+          img: true,
+          products: {
+            include: {
+              stock: true,
+              img: true,
+            },
+          },
+        },
+      }),
+      prisma.category.count(), // Get total count of categories
+    ]);
+
+    return {
+      categories,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+    };
   }
 
   public async getCategoryById(id: string) {
+    console.log(`Fetching category with ID: ${id}`);
     return await prisma.category.findUnique({
       where: { id: parseInt(id) },
       include: {
@@ -47,19 +66,34 @@ class CategoriesService {
     img: any
   ): Promise<any> {
     try {
-      let imgURL = null;
-      let imgKey = null;
-      let fileRecord = null;
+      if (!name) throw new Error("Category name is required.");
 
+      const normalizedName = name.toLowerCase();
+
+      const existingCategory = await prisma.category.findFirst({
+        where: { name: normalizedName },
+      });
+
+      if (existingCategory) {
+        throw new Error("A category with this name already exists. Please choose a different name.");
+      }
+
+      // Create the category without the image initially
+      const category = await prisma.category.create({
+        data: { name, description },
+      });
+
+      if (!category || !category.name) {
+        throw new Error("Failed to create category with a valid name.");
+      }
+
+      let fileRecord = null;
       if (img) {
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
 
         const { s3Url, key, fileName, contentType } =
           await UploadService.processUpload(stream, filename, mimetype);
-
-        imgURL = s3Url;
-        imgKey = key;
 
         fileRecord = await prisma.file.create({
           data: {
@@ -69,44 +103,28 @@ class CategoriesService {
             contentType,
           },
         });
+
+        // Link image to category
+        await prisma.category.update({
+          where: { id: category.id },
+          data: { imgId: fileRecord.id },
+        });
       }
 
-      const normalizedName = name.toLowerCase();
-      const existingCategory = await prisma.category.findFirst({
-        where: {
-          name: normalizedName,
-        },
+      // Ensure the full category data with the updated image is returned
+      const fullCategory = await prisma.category.findUnique({
+        where: { id: category.id },
+        include: { img: true },
       });
 
-      if (existingCategory) {
-        throw new Error("Category already exists");
-      }
-
-      const category = await prisma.category.create({
-        data: {
-          name,
-          description,
-          imgId: fileRecord?.id ?? null,
-        },
-      });
-
-      if (!category || !category.id) {
-        throw new Error("Failed to create category");
-      }
-
-      return {
-        ...category,
-        img: fileRecord,
-      };
+      return fullCategory; // Directly returning Prisma response
     } catch (error) {
-      console.error("Error in createCategory method:", error);
-
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
         throw new Error(
-          "A file with this name already exists. Please choose a different name."
+          "A category with this name already exists. Please choose a different name."
         );
       }
 
@@ -115,6 +133,8 @@ class CategoriesService {
       );
     }
   }
+
+
 
   public async deleteCategory(id: string) {
     try {

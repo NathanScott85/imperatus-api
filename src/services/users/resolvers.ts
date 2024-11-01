@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, ProductType } from "@prisma/client";
 import { prisma } from "../../server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import {
@@ -16,102 +16,26 @@ import ProductsService from "../products";
 
 import { DeleteUserArgs, DeleteUserResponse } from "../../types/user";
 import {
-  hasRole,
-  isAdmin,
-  isAdminOrOwner,
   isOwner,
 } from "../roles/role-checks";
 import moment from "moment-timezone";
 import { GraphQLUpload } from "graphql-upload-ts";
+import cardGameResolvers from "../cardgames/cardGameResolvers";
+import categoriesResolvers from "../categories/categoriesResolvers";
+import productResolvers from "../products/productsResolvers";
+import userResolvers from "./userResolvers";
 
 const resolvers = {
   Upload: GraphQLUpload,
   Query: {
-    users: async (
-      _: unknown,
-      {
-        page = 1,
-        limit = 10,
-        search = "",
-      }: { page: number; limit: number; search: string },
-      { user }: any,
-      context: any
-    ) => {
-      if (!user) throw new AuthenticationError("You must be logged in");
-      if (!isAdminOrOwner(user))
-        throw new AuthenticationError("Permission denied");
-
-      const offset = (page - 1) * limit;
-
-      const [users, totalCount] = await Promise.all([
-        prisma.user.findMany({
-          where: {
-            OR: [
-              {
-                fullname: {
-                  contains: search.toLowerCase(),
-                },
-              },
-              {
-                email: {
-                  contains: search.toLowerCase(),
-                },
-              },
-            ],
-          },
-          include: {
-            userRoles: {
-              include: {
-                role: true,
-              },
-            },
-          },
-          skip: offset,
-          take: limit,
-        }),
-        prisma.user.count({
-          where: {
-            OR: [
-              {
-                fullname: {
-                  contains: search.toLowerCase(),
-                },
-              },
-              {
-                email: {
-                  contains: search.toLowerCase(),
-                },
-              },
-            ],
-          },
-        }),
-      ]);
-
-      const formattedUsers = users.map((user) => ({
-        ...user,
-        dob: user.dob ? moment(user.dob).format("YYYY-MM-DD") : null,
-      }));
-
-      return {
-        users: formattedUsers,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        currentPage: page,
-      };
-    },
-
-    user: async (_: unknown, args: { id: number }, { user }: any) => {
-      if (!user) throw new AuthenticationError("You must be logged in");
-      if (!isAdminOrOwner(user))
-        throw new AuthenticationError("Permission denied");
-      return await UserService.getUserById(args.id);
-    },
-
+    ...cardGameResolvers.Query,
+    ...categoriesResolvers.Query,
+    ...productResolvers.Query,
+    ...userResolvers.Query,
     getVerificationStatus: async (_: any, { userId }: any) => {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
     },
-
     storeCreditHistory: async (
       _: any,
       {
@@ -146,208 +70,12 @@ const resolvers = {
         totalCount,
       };
     },
-
-    categories: async () => {
-      return await CategoriesService.getAllCategories();
-    },
-
-    category: async (_: any, args: any) => {
-      return await CategoriesService.getCategoryById(args.id);
-    },
-    getCategoryByName: async (_: any, args: { name: string }) => {
-      try {
-        const category = await CategoriesService.getCategoryByName(args.name);
-
-        if (!category) {
-          throw new Error(`Category with name "${args.name}" not found`);
-        }
-
-        return category;
-      } catch (error) {
-        const errorMessage = (error as Error).message;
-        console.error("Failed to retrieve category by name:", errorMessage);
-        throw new Error("Failed to retrieve category by name");
-      }
-    },
-    products: async (
-      _: unknown,
-      { page = 1, limit = 10 }: { page: number; limit: number },
-      { user }: any
-    ) => {
-      // if (!user) throw new AuthenticationError("You must be logged in");
-      // if (!isAdminOrOwner(user))
-      // throw new AuthenticationError("Permission denied");
-
-      const offset = (page - 1) * limit;
-
-      const [products, totalCount] = await Promise.all([
-        prisma.product.findMany({
-          skip: offset,
-          take: limit,
-          include: {
-            category: true,
-            stock: true,
-          },
-        }),
-        prisma.product.count(),
-      ]);
-
-      return {
-        products, // This should be a list of Product objects
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        currentPage: page,
-      };
-    },
-
-    product: async (_: any, args: { id: string }, { user }: any) => {
-      try {
-        return await ProductsService.getProductById(parseInt(args.id));
-      } catch (error) {
-        console.error("Error in product resolver:", error);
-        throw new ApolloError("Failed to retrieve product");
-      }
-    },
-  },
-
-  Category: {
-    products: async (parent: any) => {
-      return await prisma.product.findMany({
-        where: { categoryId: parent.id },
-      });
-    },
-  },
-
-  Product: {
-    stock: async (parent: any) => {
-      return await prisma.stock.findUnique({
-        where: { productId: parent.id },
-      });
-    },
-    img: async (parent: any) => {
-      return await prisma.file.findUnique({
-        where: { id: parent.imgId },
-      });
-    },
   },
   Mutation: {
-    registerUser: async (_: unknown, { input }: { input: any }) => {
-      const { fullname, email, password, dob, phone, address, city, postcode } =
-        input;
-
-      if (
-        !fullname ||
-        !email ||
-        !password ||
-        !dob ||
-        !phone ||
-        !address ||
-        !city ||
-        !postcode
-      ) {
-        throw new UserInputError("All fields are required.");
-      }
-
-      const existingUser = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() },
-      });
-      if (existingUser) {
-        throw new UserInputError("Email is already in use.");
-      }
-      const lowercaseEmail = email.toLowerCase();
-      const hashedPassword = await SecurityService.hashPassword(password);
-
-      const user = await prisma.user.create({
-        data: {
-          fullname,
-          email: lowercaseEmail,
-          password: hashedPassword,
-          dob: new Date(dob),
-          phone,
-          address,
-          city,
-          postcode,
-          userRoles: {
-            create: [{ role: { connect: { name: "USER" } } }],
-          },
-        },
-        include: {
-          userRoles: {
-            include: {
-              role: true,
-            },
-          },
-        },
-      });
-      await UserService.sendVerificationEmail(user.id);
-      const userRoles = user.userRoles.map((userRole) => userRole.role.name);
-
-      return { ...user, roles: userRoles };
-    },
-    deleteUser: async (
-      _: unknown,
-      args: DeleteUserArgs,
-      context: any
-    ): Promise<DeleteUserResponse> => {
-      const { id } = args;
-      const requestingUserId = context.user.id; // Assuming context contains the requesting user's info
-
-      try {
-        // Check if the requesting user exists and get their roles
-        const requestingUser = await UserService.getUserById(requestingUserId);
-        if (!requestingUser)
-          throw new AuthenticationError("You must be logged in");
-
-        const requestingUserRoles = await RoleService.getRolesByUserId(
-          requestingUserId
-        );
-        requestingUser.roles = requestingUserRoles.map((role) => role.name); // Add roles to the user object
-
-        // Check if the target user exists and get their roles
-        const targetUser = await UserService.getUserById(id);
-        if (!targetUser) {
-          throw new ApolloError(
-            `User with ID ${id} does not exist`,
-            "USER_NOT_FOUND"
-          );
-        }
-
-        const targetUserRoles = await RoleService.getRolesByUserId(id);
-        targetUser.roles = targetUserRoles.map((role) => role.name); // Add roles to the user object
-
-        // Determine if deletion is permitted based on roles
-        if (isOwner(requestingUser)) {
-          // Owner can delete Admin and User accounts
-          if (hasRole(targetUser, "ADMIN") || hasRole(targetUser, "USER")) {
-            await UserService.deleteUser(id); // Call the service method to delete user
-            return { message: "User account deleted successfully" };
-          }
-        } else if (isAdmin(requestingUser)) {
-          // Admin can delete User accounts
-          if (hasRole(targetUser, "USER")) {
-            await UserService.deleteUser(id); // Call the service method to delete user
-            return { message: "User account deleted successfully" };
-          }
-        } else if (hasRole(requestingUser, "USER")) {
-          // User can only delete their own account
-          if (requestingUserId === id) {
-            await UserService.deleteUser(id); // Call the service method to delete user
-            return { message: "User account deleted successfully" };
-          }
-        }
-
-        throw new ApolloError(
-          "You do not have permission to delete this user",
-          "UNAUTHORIZED"
-        );
-      } catch (error) {
-        console.error("Error deleting user:", error);
-        if (error instanceof ApolloError) {
-          throw error;
-        }
-        throw new ApolloError("Failed to delete user account", "DELETE_FAILED");
-      }
-    },
+    ...cardGameResolvers.Mutation,
+    ...categoriesResolvers.Mutation,
+    ...productResolvers.Mutation,
+    ...userResolvers.Mutation,
 
     async changeUserPassword(
       _: any,
@@ -511,72 +239,6 @@ const resolvers = {
       }
     },
 
-    createUser: async (_: any, { input }: any, context: any) => {
-      const { user } = context;
-
-      if (!user) {
-        throw new Error("Authentication required");
-      }
-
-      if (!isAdminOrOwner(user))
-        throw new AuthenticationError("Permission denied");
-
-      const existingUser = await UserService.findUserByEmail(
-        input.email.toLowerCase()
-      );
-
-      if (existingUser) {
-        throw new Error("User with this email already exists");
-      }
-
-      const hashedPassword = await SecurityService.hashPassword(input.password);
-      const roles = input.roles?.length
-        ? await prisma.role.findMany({
-            where: {
-              id: { in: input.roles },
-            },
-          })
-        : await prisma.role.findMany({ where: { name: "USER" } });
-
-      try {
-        const user = await prisma.user.create({
-          data: {
-            fullname: input.fullname,
-            address: input.address,
-            city: input.city,
-            postcode: input.postcode,
-            password: hashedPassword,
-            email: input.email.toLowerCase(),
-            dob: new Date(input.dob).toISOString(),
-            phone: input.phone,
-            userRoles: {
-              create: roles.map((role: any) => ({
-                role: { connect: { id: role.id } },
-              })),
-            },
-          },
-          include: {
-            userRoles: {
-              include: {
-                role: true,
-              },
-            },
-          },
-        });
-
-        return user;
-      } catch (error) {
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2002" &&
-          Array.isArray(error.meta?.target) &&
-          error.meta?.target.includes("email")
-        ) {
-          throw new Error("An account with this email already exists");
-        }
-        throw new Error("Failed to create user");
-      }
-    },
     loginUser: async (
       _: unknown,
       args: { email: string; password: string }
@@ -608,40 +270,6 @@ const resolvers = {
 
       return result;
     },
-
-    updateUser: async (
-      _: any,
-      args: { id: number; fullname?: string; email?: string; dob?: string },
-      context: any
-    ) => {
-      const { id, fullname, email, dob } = args;
-
-      return await UserService.updateUser(id, {
-        fullname,
-        email,
-        dob,
-      });
-    },
-    updateUserAddress: async (
-      _: any,
-      args: {
-        id: number;
-        phone?: string;
-        address?: string;
-        city?: string;
-        postcode?: string;
-      },
-      context: any
-    ) => {
-      const { id, phone, address, city, postcode } = args;
-      return await UserService.updateUserAddress(id, {
-        phone,
-        address,
-        city,
-        postcode,
-      });
-    },
-
     refreshToken: async (_: unknown, { refreshToken }: any) => {
       return await AuthorizationTokenService.refreshToken(refreshToken);
     },
@@ -730,180 +358,6 @@ const resolvers = {
       });
 
       return updatedUser;
-    },
-    createCategory: async (_: any, { name, description, img }: any) => {
-      return await CategoriesService.createCategory(name, description, img);
-    },
-
-    deleteCategory: async (
-      _: unknown,
-      args: { id: string },
-      context: any
-    ): Promise<{ message: string }> => {
-      const { id } = args;
-      const requestingUserId = context.user.id;
-
-      try {
-        const requestingUser = await prisma.user.findUnique({
-          where: { id: requestingUserId },
-          include: { userRoles: { include: { role: true } } },
-        });
-
-        if (!requestingUser) {
-          throw new AuthenticationError("You must be logged in");
-        }
-
-        const roles = requestingUser.userRoles.map(
-          (userRole) => userRole.role.name
-        );
-
-        if (!roles.includes("OWNER")) {
-          throw new AuthenticationError(
-            "You do not have permission to delete this category"
-          );
-        }
-
-        return await CategoriesService.deleteCategory(id);
-      } catch (error) {
-        console.error("Error in deleteCategory resolver:", error);
-        throw error;
-      }
-    },
-    updateCategory: async (
-      _: any,
-      {
-        id,
-        name,
-        description,
-        img,
-      }: { id: string; name?: string; description?: string; img?: any },
-      context: any
-    ) => {
-      const { user } = context;
-
-      if (!user) {
-        throw new AuthenticationError("Authentication required");
-      }
-
-      if (!isAdminOrOwner(user)) {
-        throw new AuthenticationError("Permission denied");
-      }
-
-      return await CategoriesService.updateCategory(id, name, description, img);
-    },
-    createProduct: async (_: any, args: any) => {
-      const {
-        name,
-        price,
-        type,
-        description,
-        img,
-        categoryId,
-        stock,
-        preorder,
-        rrp,
-      } = args;
-
-      return await ProductsService.createProduct(
-        name,
-        price,
-        type,
-        description,
-        img,
-        categoryId,
-        stock,
-        preorder,
-        rrp
-      );
-    },
-    updateProduct: async (
-      _: any,
-      {
-        id,
-        name,
-        price,
-        type,
-        description,
-        img,
-        categoryId,
-        stockAmount,
-        stockSold,
-        stockInstock,
-        stockSoldout,
-        stockPreorder,
-        preorder,
-        rrp,
-      }: {
-        id: string;
-        name?: string;
-        price?: number;
-        type?: string;
-        description?: string;
-        img?: any;
-        categoryId?: number; // Ensure this is a number
-        stockAmount?: number;
-        stockSold?: number;
-        stockInstock?: string;
-        stockSoldout?: string;
-        stockPreorder?: string;
-        preorder?: boolean;
-        rrp?: number;
-      },
-      { user }: any
-    ) => {
-      if (!user) {
-        throw new AuthenticationError("You must be logged in");
-      }
-
-      if (!isAdminOrOwner(user)) {
-        throw new AuthenticationError("Permission denied");
-      }
-
-      try {
-        return await ProductsService.updateProduct(
-          id,
-          name,
-          price,
-          type,
-          description,
-          img,
-          categoryId, // Pass categoryId as a number
-          {
-            amount: stockAmount,
-            sold: stockSold,
-            instock: stockInstock,
-            soldout: stockSoldout,
-            preorder: stockPreorder,
-          },
-          preorder,
-          rrp
-        );
-      } catch (error) {
-        console.error("Error in updateProduct resolver:", error);
-        throw new ApolloError("Failed to update product", "UPDATE_FAILED");
-      }
-    },
-
-    deleteProduct: async (
-      _: any,
-      args: { id: string },
-      { user }: any
-    ): Promise<{ message: string }> => {
-      if (!user) {
-        throw new AuthenticationError("You must be logged in");
-      }
-
-      // Check if the user has the necessary permissions to delete the product
-      if (!isAdminOrOwner(user)) {
-        throw new AuthenticationError("Permission denied");
-      }
-
-      try {
-        return await ProductsService.deleteProduct(args.id);
-      } catch (error) {
-        console.error("Error in deleteProduct resolver:", error);
-        throw new ApolloError("Failed to delete product", "DELETE_FAILED");
-      }
     },
   },
 };

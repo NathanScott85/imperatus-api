@@ -1,0 +1,200 @@
+import { ApolloError, AuthenticationError } from 'apollo-server';
+import { prisma } from '../../server';
+import ProductsService from '../products';
+import { isAdminOrOwner } from '../roles/role-checks';
+
+// todo split out categories resolvers.
+const productResolvers = {
+  Query: {
+    getAllProducts: async (
+      _: unknown,
+      { page = 1, limit = 10 }: { page: number; limit: number },
+    ) => {
+      try {
+        const { products, totalCount, totalPages, currentPage } = await ProductsService.getAllProducts(page, limit);
+        return {
+          products,
+          totalCount,
+          totalPages,
+          currentPage,
+        };
+      } catch (error) {
+        console.error("Error in getAllProducts resolver:", error);
+        throw new Error("Failed to retrieve products");
+      }
+    },
+    getAllProductTypes: async () => {
+      return await ProductsService.getAllProductTypes(); // Call the new service method
+    },
+
+    getProductById: async (_: any, args: { id: string }, { user }: any) => {
+      try {
+        return await ProductsService.getProductById(parseInt(args.id));
+      } catch (error) {
+        console.error("Error in product resolver:", error);
+        throw new ApolloError("Failed to retrieve product");
+      }
+    },
+  },
+  Product: {
+    category: async (parent: any) => {
+      return await prisma.category.findUnique({
+        where: { id: parent.categoryId },
+      });
+    },
+    stock: async (parent: any) => {
+      return await prisma.stock.findUnique({
+        where: { productId: parent.id },
+      });
+    },
+    img: async (parent: any) => {
+      return await prisma.file.findUnique({
+        where: { id: parent.imgId },
+      });
+    },
+  },
+  Mutation: {
+    createProductType: async (_: any, { input }: { input: { name: string } }) => {
+      try {
+        const existingType = await prisma.productType.findUnique({
+          where: { name: input.name },
+        });
+
+        if (existingType) {
+          throw new Error("Product type already exists.");
+        }
+
+        return await prisma.productType.create({
+          data: { name: input.name },  // Access name from input
+        });
+
+      } catch (error) {
+        console.error("Error creating product type:", error);
+        throw new Error("An unexpected error occurred while creating the product type.");
+      }
+    },
+
+    createProduct: async (_: any, args: any, context: any) => {
+      const {
+        name,
+        price,
+        productTypeId,
+        description,
+        img,
+        categoryId,
+        stock,
+        preorder,
+        rrp,
+      } = args;
+
+      try {
+        const newProduct = await ProductsService.createProduct(
+          name,
+          price,
+          productTypeId,
+          description,
+          img,
+          categoryId,
+          stock,  // Pass the stock input directly
+          preorder,
+          rrp
+        );
+
+        return newProduct; // Ensure the response includes the new product
+      } catch (error) {
+        console.error("Error in createProduct resolver:", error);
+        throw new Error("Failed to create product.");
+      }
+    },
+  },
+  updateProduct: async (
+    _: any,
+    {
+      id,
+      name,
+      price,
+      productTypeId,
+      description,
+      img,
+      categoryId,
+      stockAmount,
+      stockSold,
+      stockInstock,
+      stockSoldout,
+      stockPreorder,
+      preorder,
+      rrp,
+    }: {
+      id: string;
+      name?: string;
+      price?: number;
+      productTypeId: number,
+      description?: string;
+      img?: any;
+      categoryId?: number;
+      stockAmount?: number;
+      stockSold?: number;
+      stockInstock?: string;
+      stockSoldout?: string;
+      stockPreorder?: string;
+      preorder?: boolean;
+      rrp?: number;
+    },
+    { user }: any
+  ) => {
+    if (!user) {
+      throw new AuthenticationError("You must be logged in");
+    }
+
+    if (!isAdminOrOwner(user)) {
+      throw new AuthenticationError("Permission denied");
+    }
+
+    try {
+      return await ProductsService.updateProduct(
+        id,
+        name,
+        price,
+        productTypeId,
+        description,
+        img,
+        categoryId, // Pass categoryId as a number
+        {
+          amount: stockAmount,
+          sold: stockSold,
+          instock: stockInstock,
+          soldout: stockSoldout,
+          preorder: stockPreorder,
+        },
+        preorder,
+        rrp
+      );
+    } catch (error) {
+      console.error("Error in updateProduct resolver:", error);
+      throw new ApolloError("Failed to update product", "UPDATE_FAILED");
+    }
+  },
+  deleteProduct: async (
+    _: any,
+    args: { id: string },
+    { user }: any
+  ): Promise<{ message: string }> => {
+    if (!user) {
+      throw new AuthenticationError("You must be logged in");
+    }
+
+    // Check if the user has the necessary permissions to delete the product
+    if (!isAdminOrOwner(user)) {
+      throw new AuthenticationError("Permission denied");
+    }
+
+    try {
+      return await ProductsService.deleteProduct(args.id);
+    } catch (error) {
+      console.error("Error in deleteProduct resolver:", error);
+      throw new ApolloError("Failed to delete product", "DELETE_FAILED");
+    }
+  },
+};
+
+export default productResolvers;

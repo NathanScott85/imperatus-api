@@ -1,5 +1,7 @@
 import { gql } from "apollo-server";
 import productTypeDefs from "../products/productTypeDefs";
+import cardGameTypeDefs from "../cardgames/cardGameTypeDefs";
+import categoryTypeDefs from "../categories/categoriesTypeDefs";
 
 const typeDefs = gql`
   type User {
@@ -28,14 +30,6 @@ const typeDefs = gql`
     fileName: String!
     contentType: String!
     createdAt: String!
-  }
-
-  type Category {
-    id: ID!
-    name: String!
-    description: String!
-    img: File
-    products: [Product!]!
   }
 
   type StoreCreditTransaction {
@@ -126,9 +120,6 @@ const typeDefs = gql`
       limit: Int
       offset: Int
     ): StoreCreditHistoryResponse!
-    categories: [Category!]!
-    category(id: ID!): Category
-    getCategoryByName(name: String!): Category
   }
 
   type Mutation {
@@ -165,17 +156,9 @@ const typeDefs = gql`
     deleteRole(name: String!): Message!
     assignRoleToUser(userId: Int!, roleName: String!): Message!
     updateUserStoreCredit(id: Int!, amount: Float!): User!
-    createCategory(name: String!, description: String!, img: Upload!): Category!
-    deleteCategory(id: ID!): Message!
-    updateCategory(
-      id: String!
-      name: String
-      description: String
-      img: Upload
-    ): Category
   }
 `;
 
-const combinedTypeDefs = [typeDefs, productTypeDefs];
+const combinedTypeDefs = [typeDefs, productTypeDefs, cardGameTypeDefs, categoryTypeDefs];
 
 export default combinedTypeDefs;
