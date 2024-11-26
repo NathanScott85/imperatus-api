@@ -3,6 +3,7 @@ import { prisma } from "../../server";
 import CategoriesService from "../categories";
 import { isAdminOrOwner } from "../roles/role-checks";
 
+
 const categoriesResolvers = {
   Category: {
     products: async (parent: any) => {
@@ -20,13 +21,24 @@ const categoriesResolvers = {
         where: { id: parent.imgId },
       });
     },
+    type: async (parent: any) => {
+      return await prisma.categoryType.findUnique({
+        where: { id: parent.categoryTypeId },
+      })
+    }
   },
   Query: {
     getAllCategories: async (_: any, { page = 1, limit = 10 }) => {
       return await CategoriesService.getAllCategories(page, limit);
     },
+    getAllCategoryTypes: async () => {
+      return await CategoriesService.getAllCategoryTypes();
+    },
     getCategoryById: async (_: any, args: any) => {
       return await CategoriesService.getCategoryById(args.id);
+    },
+    getCategoryTypeById: async (_: any, args: any) => {
+      return await CategoriesService.getCategoryById(args.id)
     },
     getCategoryByName: async (_: any, args: { name: string }) => {
       try {
@@ -47,6 +59,25 @@ const categoriesResolvers = {
   Mutation: {
     createCategory: async (_: any, { name, description, img }: any) => {
       return await CategoriesService.createCategory(name, description, img);
+    },
+    createCategoryType: async (_: any, { input }: { input: { name: string } }) => {
+      try {
+        const existingType = await prisma.categoryType.findUnique({
+          where: { name: input.name },
+        });
+
+        if (existingType) {
+          throw new Error("Product type already exists.");
+        }
+
+        return await prisma.categoryType.create({
+          data: { name: input.name },
+        });
+
+      } catch (error) {
+        console.error("Error creating product type:", error);
+        throw new Error("An unexpected error occurred while creating the product type.");
+      }
     },
     deleteCategory: async (
       _: unknown,

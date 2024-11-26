@@ -19,13 +19,27 @@ model File {
   product     Product?  @relation("ProductImage")
 }
 
+model CategoryType {
+  id         Int        @id @default(autoincrement())
+  name       String     @unique
+  categories Category[]
+}
+
 model Category {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String
-  imgId       Int?      @unique
-  products    Product[] @relation("CategoryProducts")
-  img         File?     @relation("CategoryImage", fields: [imgId], references: [id])
+  id             Int          @id @default(autoincrement())
+  name           String       @unique
+  description    String
+  imgId          Int?         @unique
+  products       Product[]    @relation("CategoryProducts")
+  img            File?        @relation("CategoryImage", fields: [imgId], references: [id])
+  categoryTypeId Int          @default(autoincrement())
+  type           CategoryType @relation(fields: [categoryTypeId], references: [id])
+}
+
+model ProductType {
+  id      Int       @id @default(autoincrement())
+  name    String    @unique
+  Product Product[]
 }
 
 model Product {
@@ -41,7 +55,7 @@ model Product {
   category      Category    @relation("CategoryProducts", fields: [categoryId], references: [id])
   img           File?       @relation("ProductImage", fields: [imgId], references: [id])
   stock         Stock?      @relation("ProductStock")
-  productTypeId Int // Foreign key for product type
+  productTypeId Int
 
   @@map("products")
 }
@@ -55,12 +69,6 @@ model Stock {
   preorder  Boolean
   product   Product @relation("ProductStock", fields: [productId], references: [id])
   productId Int     @unique
-}
-
-model ProductType {
-  id      Int       @id @default(autoincrement())
-  name    String    @unique
-  Product Product[]
 }
 
 model User {

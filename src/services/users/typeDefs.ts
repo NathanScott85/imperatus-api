@@ -1,6 +1,5 @@
 import { gql } from "apollo-server";
 import productTypeDefs from "../products/productTypeDefs";
-import cardGameTypeDefs from "../cardgames/cardGameTypeDefs";
 import categoryTypeDefs from "../categories/categoriesTypeDefs";
 
 const typeDefs = gql`
@@ -159,6 +158,6 @@ const typeDefs = gql`
   }
 `;
 
-const combinedTypeDefs = [typeDefs, productTypeDefs, cardGameTypeDefs, categoryTypeDefs];
+const combinedTypeDefs = [typeDefs, productTypeDefs, categoryTypeDefs];
 
 export default combinedTypeDefs;

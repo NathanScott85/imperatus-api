@@ -8,19 +8,13 @@ import {
 } from "apollo-server";
 import UserService from "../users";
 import AuthenticationService from "../authentication";
-import SecurityService from "../security";
 import RoleService from "../roles"; // Import RoleService
 import AuthorizationTokenService from "../token";
-import CategoriesService from "../categories";
-import ProductsService from "../products";
-
-import { DeleteUserArgs, DeleteUserResponse } from "../../types/user";
 import {
   isOwner,
 } from "../roles/role-checks";
 import moment from "moment-timezone";
 import { GraphQLUpload } from "graphql-upload-ts";
-import cardGameResolvers from "../cardgames/cardGameResolvers";
 import categoriesResolvers from "../categories/categoriesResolvers";
 import productResolvers from "../products/productsResolvers";
 import userResolvers from "./userResolvers";
@@ -28,7 +22,6 @@ import userResolvers from "./userResolvers";
 const resolvers = {
   Upload: GraphQLUpload,
   Query: {
-    ...cardGameResolvers.Query,
     ...categoriesResolvers.Query,
     ...productResolvers.Query,
     ...userResolvers.Query,
@@ -72,7 +65,6 @@ const resolvers = {
     },
   },
   Mutation: {
-    ...cardGameResolvers.Mutation,
     ...categoriesResolvers.Mutation,
     ...productResolvers.Mutation,
     ...userResolvers.Mutation,
