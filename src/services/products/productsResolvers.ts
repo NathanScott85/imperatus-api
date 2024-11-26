@@ -3,7 +3,6 @@ import { prisma } from '../../server';
 import ProductsService from '../products';
 import { isAdminOrOwner } from '../roles/role-checks';
 
-// todo split out categories resolvers.
 const productResolvers = {
   Query: {
     getAllProducts: async (
@@ -24,7 +23,7 @@ const productResolvers = {
       }
     },
     getAllProductTypes: async () => {
-      return await ProductsService.getAllProductTypes(); // Call the new service method
+      return await ProductsService.getAllProductTypes();
     },
 
     getProductById: async (_: any, args: { id: string }, { user }: any) => {
@@ -52,6 +51,16 @@ const productResolvers = {
         where: { id: parent.imgId },
       });
     },
+    type: async (parent: any) => {
+      return await prisma.productType.findUnique({
+        where: { id: parent.productTypeId }
+      })
+    },
+    products: async (parent: any) => {
+      return await prisma.category.findUnique({
+        where: { id: parent.categoryId },
+      });
+    },
   },
   Mutation: {
     createProductType: async (_: any, { input }: { input: { name: string } }) => {
@@ -65,7 +74,7 @@ const productResolvers = {
         }
 
         return await prisma.productType.create({
-          data: { name: input.name },  // Access name from input
+          data: { name: input.name },
         });
 
       } catch (error) {
@@ -74,7 +83,7 @@ const productResolvers = {
       }
     },
 
-    createProduct: async (_: any, args: any, context: any) => {
+    createProduct: async (_: any, args: any) => {
       const {
         name,
         price,
@@ -86,7 +95,6 @@ const productResolvers = {
         preorder,
         rrp,
       } = args;
-
       try {
         const newProduct = await ProductsService.createProduct(
           name,
@@ -95,12 +103,12 @@ const productResolvers = {
           description,
           img,
           categoryId,
-          stock,  // Pass the stock input directly
+          stock,
           preorder,
           rrp
         );
 
-        return newProduct; // Ensure the response includes the new product
+        return newProduct;
       } catch (error) {
         console.error("Error in createProduct resolver:", error);
         throw new Error("Failed to create product.");
@@ -158,7 +166,7 @@ const productResolvers = {
         productTypeId,
         description,
         img,
-        categoryId, // Pass categoryId as a number
+        categoryId,
         {
           amount: stockAmount,
           sold: stockSold,
@@ -183,7 +191,6 @@ const productResolvers = {
       throw new AuthenticationError("You must be logged in");
     }
 
-    // Check if the user has the necessary permissions to delete the product
     if (!isAdminOrOwner(user)) {
       throw new AuthenticationError("Permission denied");
     }

@@ -1,7 +1,6 @@
 import { gql } from "apollo-server";
 
 const categoryTypeDefs = gql`
-  # File type definition, shared with products
   type File {
     id: ID!
     url: String!
@@ -11,13 +10,23 @@ const categoryTypeDefs = gql`
     createdAt: String!
   }
 
-  # Individual Category type definition
+  input CategoryTypeInput {
+    name: String!
+  }
+
+  type CategoryType {
+    id: ID!
+    name: String!
+    categories: [Category!]
+  }
+
   type Category {
     id: ID!
     name: String!
     description: String
     img: File
-    products: [Product!]! # Product relation within Category
+    type: CategoryType
+    products: [Product!]!
   }
 
   type PaginatedCategories {
@@ -25,23 +34,23 @@ const categoryTypeDefs = gql`
     totalCount: Int!
     totalPages: Int!
     currentPage: Int!
-}
+  }
 
-
-  # Queries and Mutations for Categories
   type Query {
     getAllCategories(page: Int, limit: Int): PaginatedCategories!
     getCategoryById(id: ID!): Category
     getCategoryByName(name: String!): Category
+    getAllCategoryTypes: [CategoryType!]!
+    getCategoryTypeById(id: String!): CategoryType
   }
 
   type Mutation {
     createCategory(name: String!, description: String!, img: Upload!): Category!
+    createCategoryType(input: ProductTypeInput!): CategoryType!
     updateCategory(id: ID!, name: String, description: String, img: Upload): Category!
     deleteCategory(id: ID!): Message!
   }
 
-  # Message type for deletions
   type Message {
     message: String!
   }

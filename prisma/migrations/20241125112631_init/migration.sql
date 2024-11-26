@@ -1,6 +1,3 @@
--- CreateEnum
-CREATE TYPE "ProductType" AS ENUM ('CARDGAME', 'BOARDGAME', 'ACCESSORY', 'BOARDGAMES');
-
 -- CreateTable
 CREATE TABLE "File" (
     "id" SERIAL NOT NULL,
@@ -14,14 +11,30 @@ CREATE TABLE "File" (
 );
 
 -- CreateTable
+CREATE TABLE "CategoryType" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "CategoryType_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Category" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "imgId" INTEGER,
-    "parentId" INTEGER,
+    "categoryTypeId" SERIAL NOT NULL,
 
     CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProductType" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "ProductType_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -31,7 +44,7 @@ CREATE TABLE "products" (
     "imgId" INTEGER,
     "name" TEXT NOT NULL,
     "price" DECIMAL(10,2),
-    "type" "ProductType" NOT NULL,
+    "productTypeId" SERIAL NOT NULL,
     "preorder" BOOLEAN,
     "rrp" DECIMAL(10,2),
     "description" TEXT NOT NULL,
@@ -46,7 +59,7 @@ CREATE TABLE "Stock" (
     "sold" INTEGER NOT NULL,
     "instock" TEXT NOT NULL,
     "soldout" TEXT NOT NULL,
-    "preorder" TEXT NOT NULL,
+    "preorder" BOOLEAN NOT NULL,
     "productId" INTEGER NOT NULL,
 
     CONSTRAINT "Stock_pkey" PRIMARY KEY ("id")
@@ -109,10 +122,16 @@ CREATE TABLE "StoreCreditTransaction" (
 CREATE UNIQUE INDEX "File_fileName_key" ON "File"("fileName");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "CategoryType_name_key" ON "CategoryType"("name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Category_imgId_key" ON "Category"("imgId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductType_name_key" ON "ProductType"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "products_imgId_key" ON "products"("imgId");
@@ -130,10 +149,13 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 CREATE UNIQUE INDEX "UserRole_userId_roleId_key" ON "UserRole"("userId", "roleId");
 
 -- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_categoryTypeId_fkey" FOREIGN KEY ("categoryTypeId") REFERENCES "CategoryType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "products" ADD CONSTRAINT "products_productTypeId_fkey" FOREIGN KEY ("productTypeId") REFERENCES "ProductType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

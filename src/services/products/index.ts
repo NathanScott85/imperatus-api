@@ -100,32 +100,35 @@ class ProductsService {
     rrp: number
   ): Promise<any> {
     try {
-      // Check for existing product first
-      const existingProduct = await prisma.product.findFirst({
-        where: {
-          name: name.toLowerCase(),
-        },
-      });
+      const [existingProductType, existingProduct] = await Promise.all([
+        prisma.productType.findUnique({
+          where: { id: productTypeId },
+        }),
+        prisma.product.findFirst({
+          where: { name: name.toLowerCase() },
+        }),
+      ]);
 
-      if (existingProduct) {
-        throw new Error("A product with this name already exists. Please choose a different name.");
+      if (!existingProductType || existingProduct) {
+        throw new Error(
+          !existingProductType
+            ? "Invalid product type. Please select a valid product type."
+            : "A product with this name already exists. Please choose a different name."
+        );
       }
 
-      // Check if the image already exists
-      if (img) {
-        const { filename } = await img; // Extract filename from the img
-        const existingImage = await prisma.file.findFirst({
-          where: {
-            fileName: filename,
-          },
+      if (categoryId) {
+        const existingCategory = await prisma.category.findUnique({
+          where: { id: categoryId },
         });
 
-        if (existingImage) {
-          throw new Error("An image with this name already exists. Please choose a different image.");
+        if (!existingCategory) {
+          throw new Error("Invalid category. Please select a valid category.");
         }
+      } else {
+        throw new Error("Category ID is required to create a product.");
       }
 
-      // Create the product without the file
       const product = await prisma.product.create({
         data: {
           name,
@@ -135,6 +138,7 @@ class ProductsService {
           preorder,
           rrp,
           categoryId,
+
           stock: {
             create: {
               amount: stock.amount,
@@ -146,15 +150,12 @@ class ProductsService {
           },
         },
         include: {
-          category: true,
           stock: true,
-          type: true, // Include product type for returning
+          category: true,
+          type: true, // Include ProductType in the response
         },
       });
 
-      console.log("Product created successfully:", product);
-
-      // Now, if there's an image, upload it
       let fileRecord = null;
 
       if (img) {
@@ -174,15 +175,12 @@ class ProductsService {
           },
         });
 
-        // Update the product with the file information
         await prisma.product.update({
           where: { id: product.id },
           data: {
             imgId: fileRecord.id, // Associate the file with the product
           },
         });
-
-        console.log('File uploaded and product updated with file information.');
       }
 
       return {
@@ -201,7 +199,6 @@ class ProductsService {
       throw new Error("An unexpected error occurred while creating the product. Please try again.");
     }
   }
-
 
 
   public async updateProduct(

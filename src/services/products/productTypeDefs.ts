@@ -8,7 +8,7 @@ type Product {
     name: String!
     img: File
     price: Float!
-    type: ProductType! # Keep this as a list of ProductTypes
+    type: ProductType!
     rrp: Float
     description: String
     stock: Stock
@@ -18,7 +18,7 @@ type Product {
 type ProductType {
     id: ID!
     name: String!
-    products: [Product!]!
+    products: [Product!]
 }
 
 input ProductTypeInput {  # This is your input type for creating product types
@@ -60,14 +60,14 @@ input StockInput {
 }
 
 type Mutation {
-    createProductType(input: ProductTypeInput!): ProductType!
-    createProduct(
+   createProductType(input: ProductTypeInput!): ProductType!
+   createProduct(
         name: String!
         price: Float!
-        productTypeId: Int!
+        productTypeId: Int
         description: String
         img: Upload
-        categoryId: Int!
+        categoryId: Int
         stock: StockInput
         preorder: Boolean!
         rrp: Float
@@ -76,18 +76,18 @@ type Mutation {
         id: ID!
         name: String
         price: Float
-        type: Int!
+        productTypeId: Int! # Use name instead of ID
         description: String
         img: Upload
-        categoryId: Int
         stockAmount: Int
         stockSold: Int
         stockInstock: String
         stockSoldout: String
-        stockPreorder: String
+        stockPreorder: Boolean
         preorder: Boolean
         rrp: Float
-    ): Product!
+    ): Product
+
 
     deleteProduct(id: ID!): Message!
 }

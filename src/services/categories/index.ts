@@ -13,9 +13,11 @@ class CategoriesService {
         take: limit,
         include: {
           img: true,
+          type: true,
           products: {
             include: {
               stock: true,
+              type: true,
               img: true,
             },
           },
@@ -32,11 +34,34 @@ class CategoriesService {
     };
   }
 
+  public async getAllCategoryTypes() {
+    try {
+      const productTypes = await prisma.categoryType.findMany({
+        include: {
+          categories: true,
+        }
+      });
+      return productTypes;
+    } catch (error) {
+      console.error("Error retrieving product types:", error);
+      throw new Error("Failed to retrieve product types");
+    }
+  }
+
+  public async getCategoryTypeById(id: string) {
+    return await prisma.categoryType.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        categories: true
+      }
+    })
+  }
+
   public async getCategoryById(id: string) {
-    console.log(`Fetching category with ID: ${id}`);
     return await prisma.category.findUnique({
       where: { id: parseInt(id) },
       include: {
+        type: true,
         products: {
           include: {
             stock: true,
@@ -51,6 +76,7 @@ class CategoriesService {
     return await prisma.category.findUnique({
       where: { name },
       include: {
+        type: true,
         products: {
           include: {
             stock: true,
@@ -66,9 +92,11 @@ class CategoriesService {
     img: any
   ): Promise<any> {
     try {
+
       if (!name) throw new Error("Category name is required.");
 
       const normalizedName = name.toLowerCase();
+      const normalizedType = name.toLowerCase();
 
       const existingCategory = await prisma.category.findFirst({
         where: { name: normalizedName },
@@ -78,19 +106,32 @@ class CategoriesService {
         throw new Error("A category with this name already exists. Please choose a different name.");
       }
 
-      // Create the category without the image initially
-      const category = await prisma.category.create({
-        data: { name, description },
+      let categoryType = await prisma.categoryType.findFirst({
+        where: { name: normalizedType },
       });
 
-      if (!category || !category.name) {
-        throw new Error("Failed to create category with a valid name.");
+      if (!categoryType) {
+        console.log(`Creating new category type: "${normalizedType}"`);
+        categoryType = await prisma.categoryType.create({
+          data: { name: normalizedType },
+        });
       }
+
+      const category = await prisma.category.create({
+        data: {
+          name,
+          description,
+          categoryTypeId: categoryType.id,
+        },
+      });
+      console.log("Created category:", category);
 
       let fileRecord = null;
       if (img) {
+        console.log("Processing file upload...");
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
+        console.log(`File Details: ${filename}, ${mimetype}`);
 
         const { s3Url, key, fileName, contentType } =
           await UploadService.processUpload(stream, filename, mimetype);
@@ -103,22 +144,23 @@ class CategoriesService {
             contentType,
           },
         });
+        console.log("Uploaded file:", fileRecord);
 
-        // Link image to category
         await prisma.category.update({
           where: { id: category.id },
           data: { imgId: fileRecord.id },
         });
       }
 
-      // Ensure the full category data with the updated image is returned
       const fullCategory = await prisma.category.findUnique({
         where: { id: category.id },
-        include: { img: true },
+        include: { img: true, type: true },
       });
+      console.log("Full category details:", fullCategory);
 
-      return fullCategory; // Directly returning Prisma response
+      return fullCategory;
     } catch (error) {
+      console.error("Error while creating category:", error);
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
@@ -127,13 +169,9 @@ class CategoriesService {
           "A category with this name already exists. Please choose a different name."
         );
       }
-
-      throw new Error(
-        "An unexpected error occurred while creating the category. Please try again."
-      );
+      // throw new Error(`An unexpected error occurred: ${error.message}`);
     }
   }
-
 
 
   public async deleteCategory(id: string) {
