@@ -76,7 +76,8 @@ type Mutation {
         id: ID!
         name: String
         price: Float
-        productTypeId: Int! # Use name instead of ID
+        productTypeId: Int!
+        categoryId: Int
         description: String
         img: Upload
         stockAmount: Int
@@ -86,9 +87,7 @@ type Mutation {
         stockPreorder: Boolean
         preorder: Boolean
         rrp: Float
-    ): Product
-
-
+    ): Product!
     deleteProduct(id: ID!): Message!
 }
 
