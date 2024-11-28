@@ -114,94 +114,105 @@ const productResolvers = {
         throw new Error("Failed to create product.");
       }
     },
-  },
-  updateProduct: async (
-    _: any,
-    {
-      id,
-      name,
-      price,
-      productTypeId,
-      description,
-      img,
-      categoryId,
-      stockAmount,
-      stockSold,
-      stockInstock,
-      stockSoldout,
-      stockPreorder,
-      preorder,
-      rrp,
-    }: {
-      id: string;
-      name?: string;
-      price?: number;
-      productTypeId: number,
-      description?: string;
-      img?: any;
-      categoryId?: number;
-      stockAmount?: number;
-      stockSold?: number;
-      stockInstock?: string;
-      stockSoldout?: string;
-      stockPreorder?: string;
-      preorder?: boolean;
-      rrp?: number;
-    },
-    { user }: any
-  ) => {
-    if (!user) {
-      throw new AuthenticationError("You must be logged in");
-    }
-
-    if (!isAdminOrOwner(user)) {
-      throw new AuthenticationError("Permission denied");
-    }
-
-    try {
-      return await ProductsService.updateProduct(
+    updateProduct: async (
+      _: any,
+      {
         id,
+        productTypeId,
+        categoryId,
         name,
         price,
-        productTypeId,
         description,
         img,
-        categoryId,
-        {
-          amount: stockAmount,
-          sold: stockSold,
-          instock: stockInstock,
-          soldout: stockSoldout,
-          preorder: stockPreorder,
-        },
+        stockAmount,
+        stockSold,
+        stockInstock,
+        stockSoldout,
+        stockPreorder,
         preorder,
-        rrp
-      );
-    } catch (error) {
-      console.error("Error in updateProduct resolver:", error);
-      throw new ApolloError("Failed to update product", "UPDATE_FAILED");
-    }
-  },
-  deleteProduct: async (
-    _: any,
-    args: { id: string },
-    { user }: any
-  ): Promise<{ message: string }> => {
-    if (!user) {
-      throw new AuthenticationError("You must be logged in");
-    }
+        rrp,
+      }: {
+        id: string;
+        categoryId: number;
+        name?: string;
+        price?: number;
+        productTypeId: number,
+        description?: string;
+        img?: any;
+        stockAmount?: number;
+        stockSold?: number;
+        stockInstock?: string;
+        stockSoldout?: string;
+        stockPreorder?: string;
+        preorder?: boolean;
+        rrp?: number;
+      },
+      { user }: any
+    ): Promise<any> => {
+      if (!user) {
+        console.log('No user found, rejecting request.');
+        throw new AuthenticationError("You must be logged in");
+      }
 
-    if (!isAdminOrOwner(user)) {
-      throw new AuthenticationError("Permission denied");
-    }
+      if (!isAdminOrOwner(user)) {
+        console.log('User does not have permission to update product.');
+        throw new AuthenticationError("Permission denied");
+      }
 
-    try {
-      return await ProductsService.deleteProduct(args.id);
-    } catch (error) {
-      console.error("Error in deleteProduct resolver:", error);
-      throw new ApolloError("Failed to delete product", "DELETE_FAILED");
-    }
+      try {
+        const updatedProduct = await ProductsService.updateProduct(
+          id,
+          productTypeId,
+          categoryId,
+          name,
+          price,
+          description,
+          img,
+          {
+            amount: stockAmount,
+            sold: stockSold,
+            instock: stockInstock,
+            soldout: stockSoldout,
+            preorder: stockPreorder,
+          },
+          preorder,
+          rrp
+        );
+
+        if (!updatedProduct) {
+          throw new ApolloError("Product update failed. No product returned.");
+        }
+        console.log("Resolver - updateProduct returned:", updatedProduct);
+        return updatedProduct
+      } catch (error) {
+        console.error("Error in updateProduct resolver:", error);
+        throw new ApolloError("Failed to update product", "UPDATE_FAILED");
+      }
+
+    },
+
+    deleteProduct: async (
+      _: any,
+      args: { id: string },
+      { user }: any
+    ): Promise<{ message: string }> => {
+      if (!user) {
+        throw new AuthenticationError("You must be logged in");
+      }
+
+      if (!isAdminOrOwner(user)) {
+        throw new AuthenticationError("Permission denied");
+      }
+
+      try {
+        return await ProductsService.deleteProduct(args.id);
+      } catch (error) {
+        console.error("Error in deleteProduct resolver:", error);
+        throw new ApolloError("Failed to delete product", "DELETE_FAILED");
+      }
+    },
   },
+
 };
 
 export default productResolvers;

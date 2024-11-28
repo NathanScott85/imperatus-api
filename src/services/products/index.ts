@@ -203,12 +203,12 @@ class ProductsService {
 
   public async updateProduct(
     id: string,
+    productTypeId: number,
+    categoryId: number,
     name?: string,
     price?: number,
-    productTypeId?: number,
     description?: string,
     img?: any,
-    categoryId?: number,
     stock?: {
       amount?: number;
       sold?: number;
@@ -219,6 +219,7 @@ class ProductsService {
     preorder?: boolean,
     rrp?: number
   ): Promise<any> {
+    console.log(id, 'id');
     try {
       let fileRecord = null;
 
@@ -244,18 +245,43 @@ class ProductsService {
           });
         }
       }
+      // Validate ProductTypeId
+      if (productTypeId) {
+        const productTypeExists = await prisma.productType.findUnique({
+          where: { id: productTypeId },
+        });
+
+        if (!productTypeExists) {
+          throw new Error(
+            `ProductType with ID ${productTypeId} does not exist.`
+          );
+        }
+      }
+
+      // Validate CategoryId
+      if (categoryId) {
+        const categoryExists = await prisma.category.findUnique({
+          where: { id: categoryId },
+        });
+
+        if (!categoryExists) {
+          throw new Error(
+            `Category with ID ${categoryId} does not exist.`
+          );
+        }
+      }
 
       const product = await prisma.product.update({
         where: { id: parseInt(id) },
         data: {
           name: name ?? undefined,
           price: price ?? undefined,
-          productTypeId: productTypeId ?? undefined, // Use productTypeId here
+          productTypeId: productTypeId,
           description: description ?? undefined,
           preorder: preorder ?? undefined,
           rrp: rrp ?? undefined,
           imgId: fileRecord?.id ?? undefined,
-          categoryId: categoryId ?? undefined,
+          categoryId,
           stock: stock
             ? {
               update: {
@@ -275,13 +301,19 @@ class ProductsService {
           type: true, // Include product type for returning
         },
       });
+      console.log("Product updated successfully:", product);
 
+      if (!product) {
+        throw new ApolloError("Product update failed. Product not found or invalid data.", "UPDATE_FAILED");
+      }
       return {
         ...product,
         img: fileRecord,
       };
     } catch (error) {
       console.error("Error in updateProduct method:", error);
+
+      // Handle duplicate name error
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
