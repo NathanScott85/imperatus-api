@@ -111,7 +111,6 @@ class CategoriesService {
       });
 
       if (!categoryType) {
-        console.log(`Creating new category type: "${normalizedType}"`);
         categoryType = await prisma.categoryType.create({
           data: { name: normalizedType },
         });
@@ -124,14 +123,11 @@ class CategoriesService {
           categoryTypeId: categoryType.id,
         },
       });
-      console.log("Created category:", category);
 
       let fileRecord = null;
       if (img) {
-        console.log("Processing file upload...");
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
-        console.log(`File Details: ${filename}, ${mimetype}`);
 
         const { s3Url, key, fileName, contentType } =
           await UploadService.processUpload(stream, filename, mimetype);
@@ -144,7 +140,6 @@ class CategoriesService {
             contentType,
           },
         });
-        console.log("Uploaded file:", fileRecord);
 
         await prisma.category.update({
           where: { id: category.id },
@@ -156,7 +151,6 @@ class CategoriesService {
         where: { id: category.id },
         include: { img: true, type: true },
       });
-      console.log("Full category details:", fullCategory);
 
       return fullCategory;
     } catch (error) {

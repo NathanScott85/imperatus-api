@@ -41,9 +41,24 @@ type PaginatedProducts {
     currentPage: Int!
 }
 
+type ProductBrands {
+    id: ID!
+    name: String!
+    description: String
+    img: File
+}
+
+type PaginatedBrands {
+    brands: [ProductBrands!]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int!
+}
+
 type Query {
     getAllProducts(page: Int, limit: Int): PaginatedProducts!
     getAllProductTypes: [ProductType!]!
+    getAllBrands(page: Int, limit: Int): PaginatedBrands!
     getProductById(id: ID!): Product
 }
 
@@ -61,6 +76,7 @@ input StockInput {
 
 type Mutation {
    createProductType(input: ProductTypeInput!): ProductType!
+   createProductBrand(name: String, description: String, img: Upload): ProductBrands
    createProduct(
         name: String!
         price: Float!
@@ -88,7 +104,9 @@ type Mutation {
         preorder: Boolean
         rrp: Float
     ): Product!
+    updateProductBrand(id: ID! name: String! description: String img: Upload): ProductBrands!
     deleteProduct(id: ID!): Message!
+    deleteBrand(id: ID!): Message!
 }
 
 `;
