@@ -1,8 +1,8 @@
 import { Prisma, PrismaClient, ProductType } from "@prisma/client";
 import UploadService from "../upload";
 import { ApolloError } from "apollo-server";
+import { prisma } from "../../server";
 
-const prisma = new PrismaClient();
 
 class ProductsService {
   public async getAllProducts(page: number = 1, limit: number = 10) {
@@ -45,6 +45,32 @@ class ProductsService {
     }
   }
 
+  public async getAllBrands(page: number = 1, limit: number = 10) {
+    try {
+      const offset = (page - 1) * limit;
+      const [brands, totalCount] = await Promise.all([
+        prisma.productBrands.findMany({
+          skip: offset,
+          take: limit,
+          include: {
+            img: true
+          }
+        }),
+        prisma.productBrands.count(),
+      ]);
+
+      return {
+        brands,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+      };
+    } catch (error) {
+      console.error("Error retrieving product brands", error);
+      throw new Error("Unable to fetch brands");
+    }
+  }
+
   public async getProductById(id: number) {
     try {
       const product = await prisma.product.findUnique({
@@ -53,7 +79,8 @@ class ProductsService {
           stock: true,
           img: true,
           category: true,
-          type: true
+          type: true,
+          brand: true
         },
       });
 
@@ -82,6 +109,68 @@ class ProductsService {
     });
   }
 
+  async createProductBrand(name: string, description: string, img: any): Promise<any> {
+    try {
+
+      if (!name) throw new Error("Brand name is required.");
+
+      const existingBrand = await prisma.productBrands.findUnique({
+        where: { name },
+      });
+      if (existingBrand) {
+        throw new Error("Product brand already exists. Please choose a different name.");
+      }
+
+      let fileRecord = null;
+
+      if (img) {
+        const { createReadStream, filename, mimetype } = await img;
+        const stream = createReadStream();
+
+        const { s3Url, key, fileName, contentType } =
+          await UploadService.processUpload(stream, filename, mimetype);
+
+        fileRecord = await prisma.file.create({
+          data: {
+            url: s3Url,
+            key,
+            fileName,
+            contentType,
+          },
+        });
+      }
+
+      const brand = await prisma.productBrands.create({
+        data: {
+          name,
+          description,
+          imgId: fileRecord?.id ?? null,
+        },
+      });
+      return {
+        ...brand,
+        img: fileRecord ? { ...fileRecord } : null,
+      };
+    } catch (error) {
+      console.error("Error in createProductBrand method:", error);
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new Error(
+          "A product with this name already exists. Please choose a different name."
+        );
+      }
+
+      // Re-throw other unexpected errors
+      throw new Error(
+        "An unexpected error occurred while creating the product brand. Please try again."
+      );
+    }
+  }
+
+
   public async createProduct(
     name: string,
     price: number,
@@ -89,6 +178,8 @@ class ProductsService {
     description: string,
     img: any,
     categoryId: number,
+    brandId: number,
+    setId: number,
     stock: {
       amount: number;
       sold: number;
@@ -100,6 +191,7 @@ class ProductsService {
     rrp: number
   ): Promise<any> {
     try {
+      // Validate product type
       const [existingProductType, existingProduct] = await Promise.all([
         prisma.productType.findUnique({
           where: { id: productTypeId },
@@ -117,28 +209,31 @@ class ProductsService {
         );
       }
 
-      if (categoryId) {
-        const existingCategory = await prisma.category.findUnique({
-          where: { id: categoryId },
-        });
-
-        if (!existingCategory) {
-          throw new Error("Invalid category. Please select a valid category.");
-        }
-      } else {
+      // Validate category
+      if (!categoryId) {
         throw new Error("Category ID is required to create a product.");
       }
 
+      const existingCategory = await prisma.category.findUnique({
+        where: { id: categoryId },
+      });
+
+      if (!existingCategory) {
+        throw new Error("Invalid category. Please select a valid category.");
+      }
+
+      // Create the product
       const product = await prisma.product.create({
         data: {
           name,
           price,
-          productTypeId,
+          productTypeId: existingProductType!.id,
           description,
           preorder,
           rrp,
           categoryId,
-
+          brandId,
+          setId,
           stock: {
             create: {
               amount: stock.amount,
@@ -152,10 +247,11 @@ class ProductsService {
         include: {
           stock: true,
           category: true,
-          type: true, // Include ProductType in the response
+          type: true, // Include related type details
         },
       });
 
+      // Handle image upload
       let fileRecord = null;
 
       if (img) {
@@ -201,6 +297,65 @@ class ProductsService {
   }
 
 
+  public async updateProductBrand(
+    id: number,
+    name: string,
+    description: string,
+    img: any
+  ): Promise<any> {
+    try {
+
+      let fileRecord = null;
+      if (img) {
+        const { createReadStream, filename, mimetype } = await img;
+        const stream = createReadStream();
+
+        fileRecord = await prisma.file.findUnique({
+          where: { fileName: filename },
+        });
+
+        if (!fileRecord) {
+          const { s3Url, key, fileName, contentType } =
+            await UploadService.processUpload(stream, filename, mimetype);
+
+          fileRecord = await prisma.file.create({
+            data: {
+              url: s3Url,
+              key,
+              fileName,
+              contentType,
+            },
+          });
+        }
+      }
+
+      const updatedBrand = await prisma.productBrands.update({
+        where: { id },
+        data: {
+          name,
+          description: description ?? undefined,
+          imgId: fileRecord?.id ?? undefined,
+        },
+      });
+
+
+      return {
+        ...updatedBrand,
+        img: fileRecord,
+      };
+    } catch (error) {
+      console.error('Error in updateProductBrand method:', error);
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new Error('Product brand not found.');
+      }
+      throw new Error('An unexpected error occurred while updating the product brand.');
+    }
+  }
+
   public async updateProduct(
     id: string,
     productTypeId: number,
@@ -219,7 +374,6 @@ class ProductsService {
     preorder?: boolean,
     rrp?: number
   ): Promise<any> {
-    console.log(id, 'id');
     try {
       let fileRecord = null;
 
@@ -301,7 +455,6 @@ class ProductsService {
           type: true, // Include product type for returning
         },
       });
-      console.log("Product updated successfully:", product);
 
       if (!product) {
         throw new ApolloError("Product update failed. Product not found or invalid data.", "UPDATE_FAILED");
@@ -366,6 +519,41 @@ class ProductsService {
       throw new ApolloError("Failed to delete product", "DELETE_FAILED");
     }
   }
+
+  public async deleteBrand(id: string) {
+    try {
+      const brand = await prisma.productBrands.findUnique({
+        where: { id: parseInt(id) },
+        include: { img: true },
+      });
+
+      if (!brand) {
+        throw new ApolloError(
+          `Brand with ID ${id} does not exist`,
+          "BRAND_NOT_FOUND"
+        );
+      }
+
+
+      if (brand.imgId && brand.img) {
+        await UploadService.deleteFileFromS3(brand.img.key);
+        await prisma.file.delete({
+          where: { id: brand.imgId },
+        });
+      }
+
+      await prisma.productBrands.delete({
+        where: { id: parseInt(id) },
+      });
+
+      return { message: "Brand deleted successfully" };
+    } catch (error) {
+      console.error("Error in deleteBrand method:", error);
+      throw new ApolloError("Failed to delete brand", "DELETE_FAILED");
+    }
+  }
+
+
 }
 
 export default new ProductsService();

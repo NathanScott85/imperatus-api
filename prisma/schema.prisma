@@ -9,14 +9,15 @@ generator client {
 }
 
 model File {
-  id          Int       @id @default(autoincrement())
+  id          Int            @id @default(autoincrement())
   url         String
   key         String
-  fileName    String    @unique
+  fileName    String         @unique
   contentType String
-  createdAt   DateTime  @default(now())
-  category    Category? @relation("CategoryImage")
-  product     Product?  @relation("ProductImage")
+  createdAt   DateTime       @default(now())
+  category    Category?      @relation("CategoryImage")
+  product     Product?       @relation("ProductImage")
+  brand       ProductBrands? @relation("BrandImage")
 }
 
 model CategoryType {
@@ -39,22 +40,41 @@ model Category {
 model ProductType {
   id      Int       @id @default(autoincrement())
   name    String    @unique
-  Product Product[]
+  product Product[]
+}
+
+model ProductBrands {
+  id          Int       @id @default(autoincrement())
+  imgId       Int?      @unique
+  name        String    @unique
+  description String
+  img         File?     @relation("BrandImage", fields: [imgId], references: [id])
+  product     Product[]
+}
+
+model ProductSet {
+  id      Int       @id @default(autoincrement())
+  setName String    @unique
+  product Product[]
 }
 
 model Product {
-  id            Int         @id @default(autoincrement())
+  id            Int           @id @default(autoincrement())
   categoryId    Int
-  imgId         Int?        @unique
+  brandId       Int
+  setId         Int
+  imgId         Int?          @unique
   name          String
-  price         Decimal?    @db.Decimal(10, 2)
-  type          ProductType @relation(fields: [productTypeId], references: [id])
+  price         Decimal?      @db.Decimal(10, 2)
+  type          ProductType   @relation(fields: [productTypeId], references: [id])
+  brand         ProductBrands @relation(fields: [brandId], references: [id])
+  set           ProductSet    @relation(fields: [setId], references: [id])
   preorder      Boolean?
-  rrp           Decimal?    @db.Decimal(10, 2)
+  rrp           Decimal?      @db.Decimal(10, 2)
   description   String
-  category      Category    @relation("CategoryProducts", fields: [categoryId], references: [id])
-  img           File?       @relation("ProductImage", fields: [imgId], references: [id])
-  stock         Stock?      @relation("ProductStock")
+  category      Category      @relation("CategoryProducts", fields: [categoryId], references: [id])
+  img           File?         @relation("ProductImage", fields: [imgId], references: [id])
+  stock         Stock?        @relation("ProductStock")
   productTypeId Int
 
   @@map("products")

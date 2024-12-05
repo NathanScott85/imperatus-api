@@ -38,16 +38,35 @@ CREATE TABLE "ProductType" (
 );
 
 -- CreateTable
+CREATE TABLE "ProductBrands" (
+    "id" SERIAL NOT NULL,
+    "imgId" INTEGER,
+    "name" TEXT NOT NULL,
+
+    CONSTRAINT "ProductBrands_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProductSet" (
+    "id" SERIAL NOT NULL,
+    "setName" TEXT NOT NULL,
+
+    CONSTRAINT "ProductSet_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "products" (
     "id" SERIAL NOT NULL,
     "categoryId" INTEGER NOT NULL,
+    "brandId" INTEGER NOT NULL,
+    "setId" INTEGER NOT NULL,
     "imgId" INTEGER,
     "name" TEXT NOT NULL,
     "price" DECIMAL(10,2),
-    "productTypeId" SERIAL NOT NULL,
     "preorder" BOOLEAN,
     "rrp" DECIMAL(10,2),
     "description" TEXT NOT NULL,
+    "productTypeId" INTEGER NOT NULL,
 
     CONSTRAINT "products_pkey" PRIMARY KEY ("id")
 );
@@ -134,6 +153,15 @@ CREATE UNIQUE INDEX "Category_imgId_key" ON "Category"("imgId");
 CREATE UNIQUE INDEX "ProductType_name_key" ON "ProductType"("name");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "ProductBrands_imgId_key" ON "ProductBrands"("imgId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductBrands_name_key" ON "ProductBrands"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProductSet_setName_key" ON "ProductSet"("setName");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "products_imgId_key" ON "products"("imgId");
 
 -- CreateIndex
@@ -155,7 +183,16 @@ ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId"
 ALTER TABLE "Category" ADD CONSTRAINT "Category_categoryTypeId_fkey" FOREIGN KEY ("categoryTypeId") REFERENCES "CategoryType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "ProductBrands" ADD CONSTRAINT "ProductBrands_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_productTypeId_fkey" FOREIGN KEY ("productTypeId") REFERENCES "ProductType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "products" ADD CONSTRAINT "products_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "ProductBrands"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "products" ADD CONSTRAINT "products_setId_fkey" FOREIGN KEY ("setId") REFERENCES "ProductSet"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

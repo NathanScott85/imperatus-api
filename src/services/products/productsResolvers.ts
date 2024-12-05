@@ -26,7 +26,17 @@ const productResolvers = {
       return await ProductsService.getAllProductTypes();
     },
 
-    getProductById: async (_: any, args: { id: string }, { user }: any) => {
+    getAllBrands: async (_: unknown, { page = 1, limit = 10 }: { page: number; limit: number }) => {
+      const { brands, totalCount, totalPages, currentPage } = await ProductsService.getAllBrands(page, limit);
+      return {
+        brands,
+        totalCount,
+        totalPages,
+        currentPage
+      }
+    },
+
+    getProductById: async (_: any, args: { id: string }) => {
       try {
         return await ProductsService.getProductById(parseInt(args.id));
       } catch (error) {
@@ -61,6 +71,11 @@ const productResolvers = {
         where: { id: parent.categoryId },
       });
     },
+    brands: async (parent: any) => {
+      return await prisma.productBrands.findUnique({
+        where: { id: parent.brandId }
+      })
+    }
   },
   Mutation: {
     createProductType: async (_: any, { input }: { input: { name: string } }) => {
@@ -83,6 +98,15 @@ const productResolvers = {
       }
     },
 
+    createProductBrand: async (_: any, { name, description, img }: any) => {
+      try {
+        return ProductsService.createProductBrand(name, description, img);
+      } catch (error) {
+        console.error("Error in createProduct resolver:", error);
+        throw new Error("Failed to create product.");
+      }
+    },
+
     createProduct: async (_: any, args: any) => {
       const {
         name,
@@ -91,6 +115,8 @@ const productResolvers = {
         description,
         img,
         categoryId,
+        brandId,
+        setId,
         stock,
         preorder,
         rrp,
@@ -103,6 +129,8 @@ const productResolvers = {
           description,
           img,
           categoryId,
+          brandId,
+          setId,
           stock,
           preorder,
           rrp
@@ -150,12 +178,10 @@ const productResolvers = {
       { user }: any
     ): Promise<any> => {
       if (!user) {
-        console.log('No user found, rejecting request.');
         throw new AuthenticationError("You must be logged in");
       }
 
       if (!isAdminOrOwner(user)) {
-        console.log('User does not have permission to update product.');
         throw new AuthenticationError("Permission denied");
       }
 
@@ -182,13 +208,20 @@ const productResolvers = {
         if (!updatedProduct) {
           throw new ApolloError("Product update failed. No product returned.");
         }
-        console.log("Resolver - updateProduct returned:", updatedProduct);
         return updatedProduct
       } catch (error) {
         console.error("Error in updateProduct resolver:", error);
         throw new ApolloError("Failed to update product", "UPDATE_FAILED");
       }
 
+    },
+    async updateProductBrand(_: any, { id, name, description, img }: any) {
+      try {
+        return await ProductsService.updateProductBrand(parseInt(id, 10), name, description, img);
+      } catch (error) {
+        console.error("Error in updateProductBrand resolver:", error);
+        throw new Error("Failed to update product brand.");
+      }
     },
 
     deleteProduct: async (
@@ -211,6 +244,27 @@ const productResolvers = {
         throw new ApolloError("Failed to delete product", "DELETE_FAILED");
       }
     },
+    deleteBrand: async (
+      _: any,
+      args: { id: string },
+      { user }: any
+    ): Promise<{ message: string }> => {
+      if (!user) {
+        throw new AuthenticationError("You must be logged in");
+      }
+
+      if (!isAdminOrOwner(user)) {
+        throw new AuthenticationError("Permission denied");
+      }
+
+      try {
+        return await ProductsService.deleteBrand(args.id);
+      } catch (error) {
+        console.error("Error in deleteBrand resolver:", error);
+        throw new ApolloError("Failed to delete brand", "DELETE_FAILED");
+      }
+    },
+
   },
 
 };
