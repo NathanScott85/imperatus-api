@@ -22,12 +22,24 @@ const productResolvers = {
         throw new Error("Failed to retrieve products");
       }
     },
-    getAllProductTypes: async () => {
-      return await ProductsService.getAllProductTypes();
+    getAllProductTypes: async (
+      _: unknown,
+      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
+    ) => {
+      const { types, totalCount, totalPages, currentPage } = await ProductsService.getAllProductTypes(page, limit, search);
+      return {
+        types,
+        totalCount,
+        totalPages,
+        currentPage,
+      };
     },
 
-    getAllBrands: async (_: unknown, { page = 1, limit = 10 }: { page: number; limit: number }) => {
-      const { brands, totalCount, totalPages, currentPage } = await ProductsService.getAllBrands(page, limit);
+
+    getAllBrands: async (
+      _: unknown,
+      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string }) => {
+      const { brands, totalCount, totalPages, currentPage } = await ProductsService.getAllBrands(page, limit, search);
       return {
         brands,
         totalCount,

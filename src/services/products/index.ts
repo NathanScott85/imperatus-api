@@ -35,28 +35,73 @@ class ProductsService {
     }
   }
 
-  public async getAllProductTypes() {
+  public async getAllProductTypes(page: number = 1, limit: number = 10, search: string = "") {
     try {
-      const productTypes = await prisma.productType.findMany();
-      return productTypes;
+      const offset = (page - 1) * limit;
+
+      const [types, totalCount] = await Promise.all([
+        prisma.productType.findMany({
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+          skip: offset,
+          take: limit,
+        }),
+        prisma.productType.count({
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+        }),
+      ]);
+
+      return {
+        types,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+      };
     } catch (error) {
       console.error("Error retrieving product types:", error);
       throw new Error("Failed to retrieve product types");
     }
   }
 
-  public async getAllBrands(page: number = 1, limit: number = 10) {
+  public async getAllBrands(page: number = 1, limit: number = 10, search: string = "") {
     try {
       const offset = (page - 1) * limit;
       const [brands, totalCount] = await Promise.all([
         prisma.productBrands.findMany({
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
           skip: offset,
           take: limit,
-          include: {
-            img: true
-          }
         }),
-        prisma.productBrands.count(),
+        prisma.productBrands.count({
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+        }),
       ]);
 
       return {

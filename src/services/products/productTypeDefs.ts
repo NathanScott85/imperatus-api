@@ -21,7 +21,7 @@ type ProductType {
     products: [Product!]
 }
 
-input ProductTypeInput {  # This is your input type for creating product types
+input ProductTypeInput {
     name: String!
 }
 
@@ -55,10 +55,17 @@ type PaginatedBrands {
     currentPage: Int!
 }
 
+type PaginatedTypes { 
+    types: [ProductType]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int! 
+}
+
 type Query {
     getAllProducts(page: Int, limit: Int): PaginatedProducts!
-    getAllProductTypes: [ProductType!]!
-    getAllBrands(page: Int, limit: Int): PaginatedBrands!
+    getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
+    getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
     getProductById(id: ID!): Product
 }
 
