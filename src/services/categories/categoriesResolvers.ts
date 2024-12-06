@@ -28,8 +28,16 @@ const categoriesResolvers = {
     }
   },
   Query: {
-    getAllCategories: async (_: any, { page = 1, limit = 10 }) => {
-      return await CategoriesService.getAllCategories(page, limit);
+    getAllCategories: async (_: any,
+      { page = 1, limit = 10, search = "" }:
+        { page: number; limit: number; search?: string }) => {
+      const { categories, totalCount, totalPages, currentPage } = await CategoriesService.getAllCategories(page, limit, search);
+      return {
+        categories,
+        totalCount,
+        totalPages,
+        currentPage,
+      };
     },
     getAllCategoryTypes: async () => {
       return await CategoriesService.getAllCategoryTypes();

@@ -37,7 +37,7 @@ const categoryTypeDefs = gql`
   }
 
   type Query {
-    getAllCategories(page: Int, limit: Int): PaginatedCategories!
+    getAllCategories(page: Int, limit: Int, search: String): PaginatedCategories!
     getCategoryById(id: ID!): Category
     getCategoryByName(name: String!): Category
     getAllCategoryTypes: [CategoryType!]!

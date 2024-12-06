@@ -4,11 +4,18 @@ import UploadService from "../upload";
 import { prisma } from "../../server";
 
 class CategoriesService {
-  public async getAllCategories(page: number = 1, limit: number = 10) {
+  public async getAllCategories(page: number = 1, limit: number = 10, search: string = "") {
     const offset = (page - 1) * limit;
-
     const [categories, totalCount] = await Promise.all([
       prisma.category.findMany({
+        where: search
+          ? {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          }
+          : undefined,
         skip: offset,
         take: limit,
         include: {
@@ -23,7 +30,16 @@ class CategoriesService {
           },
         },
       }),
-      prisma.category.count(), // Get total count of categories
+      prisma.category.count({
+        where: search
+          ? {
+            name: {
+              contains: search,
+              mode: "insensitive",
+            },
+          }
+          : undefined,
+      }),
     ]);
 
     return {
