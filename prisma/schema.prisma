@@ -53,9 +53,11 @@ model ProductBrands {
 }
 
 model ProductSet {
-  id      Int       @id @default(autoincrement())
-  setName String    @unique
-  product Product[]
+  id          Int       @id @default(autoincrement())
+  setName     String    @unique
+  setCode     String    @unique
+  description String
+  product     Product[]
 }
 
 model Product {

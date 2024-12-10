@@ -48,6 +48,18 @@ const productResolvers = {
       }
     },
 
+    getAllSets: async (
+      _: unknown,
+      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string }) => {
+      const { sets, totalCount, totalPages, currentPage } = await ProductsService.getAllProductSets(page, limit, search);
+      return {
+        sets,
+        totalCount,
+        totalPages,
+        currentPage
+      }
+    },
+
     getProductById: async (_: any, args: { id: string }) => {
       try {
         return await ProductsService.getProductById(parseInt(args.id));
@@ -116,6 +128,15 @@ const productResolvers = {
       } catch (error) {
         console.error("Error in createProduct resolver:", error);
         throw new Error("Failed to create product.");
+      }
+    },
+
+    createProductSet: async (_: any, { setName, setCode, description }: any) => {
+      try {
+        return ProductsService.createProductSet(setName, setCode, description)
+      } catch (error) {
+        console.error("Error in createProduct resolver:", error);
+        throw new Error("Failed to create product set");
       }
     },
 

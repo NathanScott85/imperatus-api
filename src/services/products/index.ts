@@ -18,6 +18,7 @@ class ProductsService {
             stock: true,
             img: true,
             type: true,
+            set: true,
           },
         }),
         prisma.product.count(),
@@ -116,6 +117,44 @@ class ProductsService {
     }
   }
 
+  public async getAllProductSets(page: number = 1, limit: number = 10, search: string = "") {
+    try {
+      const offset = (page - 1) * limit;
+      const [sets, totalCount] = await Promise.all([
+        prisma.productSet.findMany({
+          where: search
+            ? {
+              setName: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+          skip: offset,
+          take: limit,
+        }),
+        prisma.productSet.count({
+          where: search
+            ? {
+              setName: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+        }),
+      ]);
+      return {
+        sets,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page
+      }
+    } catch (error) {
+      console.error("Error retrieving product sets", error);
+      throw new Error(`Unable to fetch sets, ${error}`);
+    }
+  }
   public async getProductById(id: number) {
     try {
       const product = await prisma.product.findUnique({
@@ -215,6 +254,42 @@ class ProductsService {
     }
   }
 
+  async createProductSet(setName: string, setCode: string, description: string): Promise<any> {
+    try {
+      if (!setName) throw new Error("Set name is required");
+
+      const existingSet = await prisma.productSet.findUnique({
+        where: { setName }
+      });
+      if (existingSet) {
+        throw new Error("Product set already exists. Please choose a different name")
+      }
+
+      return await prisma.productSet.create({
+        data: {
+          setName,
+          setCode,
+          description
+        }
+      });
+
+    } catch (error) {
+      console.error("Error in createProductBrand method:", error);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new Error(
+          "A product with this name already exists. Please choose a different name."
+        );
+      }
+
+      // Re-throw other unexpected errors
+      throw new Error(
+        "An unexpected error occurred while creating the product brand. Please try again."
+      );
+    }
+  }
 
   public async createProduct(
     name: string,
