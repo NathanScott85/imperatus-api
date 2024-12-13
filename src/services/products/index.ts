@@ -92,6 +92,9 @@ class ProductsService {
             : undefined,
           skip: offset,
           take: limit,
+          include: {
+            img: true,
+          },
         }),
         prisma.productBrands.count({
           where: search
