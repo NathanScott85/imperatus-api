@@ -35,7 +35,6 @@ const productResolvers = {
       };
     },
 
-
     getAllBrands: async (
       _: unknown,
       { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string }) => {
@@ -257,6 +256,15 @@ const productResolvers = {
       }
     },
 
+    async updateProductSet(_: any, { id, setName, setCode, description, }: any) {
+      try {
+        return await ProductsService.updateProductSet(parseInt(id, 10), setName, setCode, description);
+      } catch (error) {
+        console.error("Error in updateProductBrand resolver:", error);
+        throw new Error("Failed to update product brand.");
+      }
+    },
+
     deleteProduct: async (
       _: any,
       args: { id: string },
@@ -297,7 +305,34 @@ const productResolvers = {
         throw new ApolloError("Failed to delete brand", "DELETE_FAILED");
       }
     },
+    deleteSet: async (
+      _: any,
+      args: { id: string },
+      { user }: any
+    ): Promise<{ message: string }> => {
 
+      if (!user) {
+        console.log("No user found in context. Throwing AuthenticationError.");
+        throw new AuthenticationError("You must be logged in");
+      }
+
+      if (!isAdminOrOwner(user)) {
+        throw new AuthenticationError("Permission denied");
+      }
+
+      try {
+        const result = await ProductsService.deleteSet(args.id);
+
+        if (!result) {
+          console.error("Result is null or undefined, throwing ApolloError.");
+          throw new ApolloError("Failed to delete set - no result returned");
+        }
+        return result;
+      } catch (error) {
+        console.error("Error caught in deleteSet resolver:", error);
+        throw new ApolloError("Failed to delete set", "DELETE_FAILED");
+      }
+    },
   },
 
 };

@@ -289,7 +289,7 @@ class ProductsService {
 
       // Re-throw other unexpected errors
       throw new Error(
-        "An unexpected error occurred while creating the product brand. Please try again."
+        "An unexpected error occurred while creating the product set. Please try again."
       );
     }
   }
@@ -397,14 +397,14 @@ class ProductsService {
         await prisma.product.update({
           where: { id: product.id },
           data: {
-            imgId: fileRecord.id, // Associate the file with the product
+            imgId: fileRecord.id,
           },
         });
       }
 
       return {
         ...product,
-        img: fileRecord, // Attach the file record to the response
+        img: fileRecord,
       };
     } catch (error) {
       console.error("Error in createProduct method:", error);
@@ -418,7 +418,6 @@ class ProductsService {
       throw new Error("An unexpected error occurred while creating the product. Please try again.");
     }
   }
-
 
   public async updateProductBrand(
     id: number,
@@ -476,6 +475,36 @@ class ProductsService {
         throw new Error('Product brand not found.');
       }
       throw new Error('An unexpected error occurred while updating the product brand.');
+    }
+  }
+
+  public async updateProductSet(
+    id: number,
+    setName: string,
+    setCode: string,
+    description: string
+  ): Promise<any> {
+    try {
+      const updatedSet = await prisma.productSet.update({
+        where: { id },
+        data: {
+          setName,
+          setCode,
+          description: description ?? undefined,
+        },
+      });
+
+      return updatedSet;
+    } catch (error) {
+      console.error('Error in updateProductSet method:', error);
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new Error('Product set not found.');
+      }
+      throw new Error('An unexpected error occurred while updating the product set.');
     }
   }
 
@@ -673,6 +702,30 @@ class ProductsService {
     } catch (error) {
       console.error("Error in deleteBrand method:", error);
       throw new ApolloError("Failed to delete brand", "DELETE_FAILED");
+    }
+  }
+
+  public async deleteSet(id: string) {
+    try {
+      const set = await prisma.productSet.findUnique({
+        where: { id: parseInt(id) },
+      });
+      console.log(set, 'set');
+      if (!set) {
+        throw new ApolloError(
+          `Set with ID ${id} does not exist`,
+          "SET_NOT_FOUND"
+        );
+      }
+
+      await prisma.productSet.delete({
+        where: { id: parseInt(id) },
+      });
+
+      return { message: "Set deleted successfully" };
+    } catch (error) {
+      console.error("Error in deleteSet method:", error);
+      throw new ApolloError("Failed to delete set", "DELETE_FAILED");
     }
   }
 

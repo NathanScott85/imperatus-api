@@ -128,9 +128,11 @@ type Mutation {
         preorder: Boolean
         rrp: Float
     ): Product!
-    updateProductBrand(id: ID! name: String! description: String img: Upload): ProductBrands!
+    updateProductBrand(id: ID!, name: String!, description: String, img: Upload): ProductBrands!
+    updateProductSet(id: ID! setName: String!, setCode: String!, description: String): ProductSets!
     deleteProduct(id: ID!): Message!
     deleteBrand(id: ID!): Message!
+    deleteSet(id: ID!): Message!
 }
 
 `;
