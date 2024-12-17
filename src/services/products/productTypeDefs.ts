@@ -12,6 +12,7 @@ type Product {
     rrp: Float
     description: String
     stock: Stock
+    sets: ProductSets!
     preorder: Boolean!
 }
 
@@ -55,6 +56,20 @@ type PaginatedBrands {
     currentPage: Int!
 }
 
+type PaginatedSets {
+    sets: [ProductSets]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int!
+}
+
+type ProductSets {
+    id: ID!
+    setName: String!
+    setCode: String!
+    description: String
+}
+
 type PaginatedTypes { 
     types: [ProductType]!
     totalCount: Int!
@@ -66,6 +81,7 @@ type Query {
     getAllProducts(page: Int, limit: Int): PaginatedProducts!
     getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
     getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
+    getAllSets(page: Int, limit: Int, search: String): PaginatedSets!
     getProductById(id: ID!): Product
 }
 
@@ -84,6 +100,7 @@ input StockInput {
 type Mutation {
    createProductType(input: ProductTypeInput!): ProductType!
    createProductBrand(name: String, description: String, img: Upload): ProductBrands
+   createProductSet(setName: String, setCode: String, description: String): ProductSets
    createProduct(
         name: String!
         price: Float!
@@ -111,9 +128,11 @@ type Mutation {
         preorder: Boolean
         rrp: Float
     ): Product!
-    updateProductBrand(id: ID! name: String! description: String img: Upload): ProductBrands!
+    updateProductBrand(id: ID!, name: String!, description: String, img: Upload): ProductBrands!
+    updateProductSet(id: ID! setName: String!, setCode: String!, description: String): ProductSets!
     deleteProduct(id: ID!): Message!
     deleteBrand(id: ID!): Message!
+    deleteSet(id: ID!): Message!
 }
 
 `;
