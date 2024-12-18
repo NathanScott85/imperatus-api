@@ -3,7 +3,7 @@ import { startServer } from "./server"; // Import the startServer function from 
 async function start() {
   try {
     const server = await startServer();
-    const port = 4000;
+    const port = process.env.PORT || 4000;
     server.listen({ port }, () => {
       console.log(`🚀 Server ready at http://localhost:${port}/graphql`);
     });
