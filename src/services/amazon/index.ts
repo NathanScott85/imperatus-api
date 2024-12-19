@@ -5,6 +5,7 @@ class S3Service {
   private bucketName: string;
 
   constructor() {
+    console.log(process.env)
     this.s3 = new AWS.S3({
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
