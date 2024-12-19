@@ -1,4 +1,5 @@
 import { startServer } from "./server"; // Import the startServer function from server.ts
+import 'dotenv/config';
 
 async function start() {
   try {
