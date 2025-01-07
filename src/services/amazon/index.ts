@@ -5,16 +5,15 @@ class S3Service {
   private bucketName: string;
 
   constructor() {
-    console.log(process.env)
-    this.s3 = new AWS.S3({
+    this.s3 = new AWS.S3( {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
       region: process.env.AWS_REGION,
-    });
+    } );
 
     this.bucketName = process.env.S3_BUCKET_NAME as string;
-    if (!this.bucketName) {
-      throw new Error("S3 bucket name is not set in environment variables.");
+    if ( !this.bucketName ) {
+      throw new Error( "S3 bucket name is not set in environment variables." );
     }
   }
 
@@ -31,25 +30,25 @@ class S3Service {
     };
 
     try {
-      const data = await this.s3.upload(params).promise();
+      const data = await this.s3.upload( params ).promise();
       return { s3Url: data.Location, key: fileName };
-    } catch (error) {
-      console.error("Error uploading file to S3:", error);
-      throw new Error("Error uploading file to S3");
+    } catch ( error ) {
+      console.error( "Error uploading file to S3:", error );
+      throw new Error( "Error uploading file to S3" );
     }
   }
 
-  public async deleteFile(fileKey: string): Promise<void> {
+  public async deleteFile( fileKey: string ): Promise<void> {
     const params: AWS.S3.DeleteObjectRequest = {
       Bucket: this.bucketName,
       Key: fileKey,
     };
 
     try {
-      await this.s3.deleteObject(params).promise();
-    } catch (error) {
-      console.error("Error deleting file from S3:", error);
-      throw new Error("Error deleting file from S3");
+      await this.s3.deleteObject( params ).promise();
+    } catch ( error ) {
+      console.error( "Error deleting file from S3:", error );
+      throw new Error( "Error deleting file from S3" );
     }
   }
 }

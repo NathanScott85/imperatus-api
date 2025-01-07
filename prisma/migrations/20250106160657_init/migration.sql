@@ -11,6 +11,30 @@ CREATE TABLE "File" (
 );
 
 -- CreateTable
+CREATE TABLE "CarouselPage" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CarouselPage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "CarouselItem" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "imgId" INTEGER NOT NULL,
+    "carouselPageId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CarouselItem_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "CategoryType" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
@@ -42,6 +66,7 @@ CREATE TABLE "ProductBrands" (
     "id" SERIAL NOT NULL,
     "imgId" INTEGER,
     "name" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
 
     CONSTRAINT "ProductBrands_pkey" PRIMARY KEY ("id")
 );
@@ -50,6 +75,8 @@ CREATE TABLE "ProductBrands" (
 CREATE TABLE "ProductSet" (
     "id" SERIAL NOT NULL,
     "setName" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "setCode" TEXT NOT NULL,
 
     CONSTRAINT "ProductSet_pkey" PRIMARY KEY ("id")
 );
@@ -141,6 +168,9 @@ CREATE TABLE "StoreCreditTransaction" (
 CREATE UNIQUE INDEX "File_fileName_key" ON "File"("fileName");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "CarouselItem_imgId_key" ON "CarouselItem"("imgId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "CategoryType_name_key" ON "CategoryType"("name");
 
 -- CreateIndex
@@ -162,6 +192,9 @@ CREATE UNIQUE INDEX "ProductBrands_name_key" ON "ProductBrands"("name");
 CREATE UNIQUE INDEX "ProductSet_setName_key" ON "ProductSet"("setName");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "ProductSet_setCode_key" ON "ProductSet"("setCode");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "products_imgId_key" ON "products"("imgId");
 
 -- CreateIndex
@@ -177,22 +210,22 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 CREATE UNIQUE INDEX "UserRole_userId_roleId_key" ON "UserRole"("userId", "roleId");
 
 -- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "CarouselItem" ADD CONSTRAINT "CarouselItem_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CarouselItem" ADD CONSTRAINT "CarouselItem_carouselPageId_fkey" FOREIGN KEY ("carouselPageId") REFERENCES "CarouselPage"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_categoryTypeId_fkey" FOREIGN KEY ("categoryTypeId") REFERENCES "CategoryType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Category" ADD CONSTRAINT "Category_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ProductBrands" ADD CONSTRAINT "ProductBrands_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "products" ADD CONSTRAINT "products_productTypeId_fkey" FOREIGN KEY ("productTypeId") REFERENCES "ProductType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_brandId_fkey" FOREIGN KEY ("brandId") REFERENCES "ProductBrands"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "products" ADD CONSTRAINT "products_setId_fkey" FOREIGN KEY ("setId") REFERENCES "ProductSet"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -201,13 +234,19 @@ ALTER TABLE "products" ADD CONSTRAINT "products_categoryId_fkey" FOREIGN KEY ("c
 ALTER TABLE "products" ADD CONSTRAINT "products_imgId_fkey" FOREIGN KEY ("imgId") REFERENCES "File"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "products" ADD CONSTRAINT "products_productTypeId_fkey" FOREIGN KEY ("productTypeId") REFERENCES "ProductType"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "products" ADD CONSTRAINT "products_setId_fkey" FOREIGN KEY ("setId") REFERENCES "ProductSet"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Stock" ADD CONSTRAINT "Stock_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StoreCreditTransaction" ADD CONSTRAINT "StoreCreditTransaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

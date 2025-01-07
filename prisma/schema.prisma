@@ -1,11 +1,11 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider          = "postgresql"
   url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model File {
@@ -16,8 +16,28 @@ model File {
   contentType String
   createdAt   DateTime       @default(now())
   category    Category?      @relation("CategoryImage")
-  product     Product?       @relation("ProductImage")
   brand       ProductBrands? @relation("BrandImage")
+  product     Product?       @relation("ProductImage")
+  carousel    CarouselPage?  @relation("CarouselImage")
+}
+
+model CarouselPages {
+  id          String   @id @default(cuid())
+  pages       CarouselPage[] @relation("CarouselPages")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CarouselPage {
+  id           String         @id @default(cuid())
+  title        String
+  description  String?
+  img          File?          @relation("CarouselImage", fields: [imgId], references: [id])
+  imgId        Int?           @unique
+  carouselPageId String?
+  carouselPage CarouselPages? @relation("CarouselPages", fields: [carouselPageId], references: [id])
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model CategoryType {
@@ -31,10 +51,10 @@ model Category {
   name           String       @unique
   description    String
   imgId          Int?         @unique
-  products       Product[]    @relation("CategoryProducts")
-  img            File?        @relation("CategoryImage", fields: [imgId], references: [id])
   categoryTypeId Int          @default(autoincrement())
   type           CategoryType @relation(fields: [categoryTypeId], references: [id])
+  img            File?        @relation("CategoryImage", fields: [imgId], references: [id])
+  products       Product[]    @relation("CategoryProducts")
 }
 
 model ProductType {
@@ -55,8 +75,8 @@ model ProductBrands {
 model ProductSet {
   id          Int       @id @default(autoincrement())
   setName     String    @unique
-  setCode     String    @unique
   description String
+  setCode     String    @unique
   product     Product[]
 }
 
@@ -68,16 +88,16 @@ model Product {
   imgId         Int?          @unique
   name          String
   price         Decimal?      @db.Decimal(10, 2)
-  type          ProductType   @relation(fields: [productTypeId], references: [id])
-  brand         ProductBrands @relation(fields: [brandId], references: [id])
-  set           ProductSet    @relation(fields: [setId], references: [id])
   preorder      Boolean?
   rrp           Decimal?      @db.Decimal(10, 2)
   description   String
+  productTypeId Int
+  stock         Stock?        @relation("ProductStock")
+  brand         ProductBrands @relation(fields: [brandId], references: [id])
   category      Category      @relation("CategoryProducts", fields: [categoryId], references: [id])
   img           File?         @relation("ProductImage", fields: [imgId], references: [id])
-  stock         Stock?        @relation("ProductStock")
-  productTypeId Int
+  type          ProductType   @relation(fields: [productTypeId], references: [id])
+  set           ProductSet    @relation(fields: [setId], references: [id])
 
   @@map("products")
 }
@@ -89,8 +109,8 @@ model Stock {
   instock   String
   soldout   String
   preorder  Boolean
-  product   Product @relation("ProductStock", fields: [productId], references: [id])
   productId Int     @unique
+  product   Product @relation("ProductStock", fields: [productId], references: [id])
 }
 
 model User {
@@ -108,11 +128,11 @@ model User {
   emailVerified           Boolean                  @default(false)
   verificationToken       String?
   verificationTokenExpiry DateTime?
-  userRoles               UserRole[]               @relation("UserRoles")
   refreshToken            String?
   refreshTokenExpiry      DateTime?
   storeCredit             Float                    @default(0.0)
   transactions            StoreCreditTransaction[]
+  userRoles               UserRole[]               @relation("UserRoles")
 }
 
 model Role {
@@ -125,8 +145,8 @@ model UserRole {
   id     Int  @id @default(autoincrement())
   userId Int
   roleId Int
-  user   User @relation("UserRoles", fields: [userId], references: [id])
   role   Role @relation("UserRoles", fields: [roleId], references: [id])
+  user   User @relation("UserRoles", fields: [userId], references: [id])
 
   @@unique([userId, roleId])
 }
