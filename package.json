@@ -6,11 +6,13 @@
   "scripts": {
     "dev": "dotenv -e .env.development -- ts-node-dev --respawn src/index.ts",
     "start": "dotenv -e .env.production ts-node src/index.ts",
-    "ps": "npx prisma studio",
-    "migrate": "dotenv -e .env.production -- npx prisma migrate dev --name init",
-    "migrate-dev": "dotenv -e .env.developemt -- npx prisma migrate dev --name init",
-    "generate": "dotenv -e .env.production -- npx prisma generate",
-    "generate-dev": "dotenv -e .env.production -- npx prisma generate",
+    "pull": "dotenv -e .env.development -- npx prisma db pull",
+    "ps": "dotenv -e .env.development npx prisma studio",
+    "migrate": "dotenv -e .env.development npx prisma migrate dev --name init",
+    "seed": "dotenv -e .env.development -- ts-node src/seed/user.ts",
+    "migrateprod": "dotenv -e .env.production -- npx prisma migrate deploy",
+    "generate": "dotenv -e .env.development -- npx prisma generate",
+    "generateprod": "dotenv -e .env.production -- npx prisma generate",
     "test": "jest",
     "watch": "jest --watch",
     "test:coverage": "jest --coverage"
