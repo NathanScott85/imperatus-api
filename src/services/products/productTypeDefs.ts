@@ -105,6 +105,8 @@ type Mutation {
         name: String!
         price: Float!
         productTypeId: Int
+        brandId: Int
+        setId: Int
         description: String
         img: Upload
         categoryId: Int
