@@ -14,11 +14,20 @@ class ProductsService {
           skip: offset,
           take: limit,
           include: {
-            category: true,
+            category: {
+              include: {
+                img: true
+              }
+            },
             stock: true,
             img: true,
             type: true,
             set: true,
+            brand: {
+              include: {
+                img: true, // Include the image relation for brands
+              },
+            },
           },
         } ),
         prisma.product.count(),
