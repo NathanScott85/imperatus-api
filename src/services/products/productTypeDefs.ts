@@ -12,8 +12,21 @@ type Product {
     rrp: Float
     description: String
     stock: Stock
-    sets: ProductSets!
+    set: ProductSets!
+    brand: ProductBrands!
     preorder: Boolean!
+
+}
+
+scalar Upload
+
+type File {
+  id: ID!
+  url: String!
+  key: String!
+  fileName: String!
+  contentType: String!
+  createdAt: String!
 }
 
 type ProductType {
@@ -105,6 +118,8 @@ type Mutation {
         name: String!
         price: Float!
         productTypeId: Int
+        brandId: Int
+        setId: Int
         description: String
         img: Upload
         categoryId: Int

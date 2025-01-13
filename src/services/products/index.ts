@@ -14,11 +14,20 @@ class ProductsService {
           skip: offset,
           take: limit,
           include: {
-            category: true,
+            category: {
+              include: {
+                img: true
+              }
+            },
             stock: true,
             img: true,
             type: true,
             set: true,
+            brand: {
+              include: {
+                img: true, // Include the image relation for brands
+              },
+            },
           },
         } ),
         prisma.product.count(),
@@ -345,6 +354,21 @@ class ProductsService {
         throw new Error( "Invalid category. Please select a valid category." );
       }
 
+      const existingSet = await prisma.productSet.findUnique( {
+        where: { id: setId }
+      } )
+
+      if ( !existingSet ) {
+        throw new Error( "Invalid set. Please select a valid set." );
+      }
+
+      const existingBrand = await prisma.productBrands.findUnique( {
+        where: { id: brandId }
+      } )
+
+      if ( !existingBrand ) {
+        throw new Error( "Invalid brand. Please select a valid brand." );
+      }
       // Create the product
       const product = await prisma.product.create( {
         data: {
