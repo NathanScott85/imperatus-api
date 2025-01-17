@@ -36,6 +36,8 @@ model CarouselPage {
   imgId        Int?           @unique
   carouselPageId String?
   carouselPage CarouselPages? @relation("CarouselPages", fields: [carouselPageId], references: [id])
+  brandId      Int?
+  brand        ProductBrands?  @relation("CarouselBrands", fields: [brandId], references: [id])
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -63,13 +65,15 @@ model ProductType {
   product Product[]
 }
 
+
 model ProductBrands {
-  id          Int       @id @default(autoincrement())
-  imgId       Int?      @unique
-  name        String    @unique
+  id          Int               @id @default(autoincrement())
+  imgId       Int?              @unique
+  name        String            @unique
   description String
-  img         File?     @relation("BrandImage", fields: [imgId], references: [id])
+  img         File?             @relation("BrandImage", fields: [imgId], references: [id])
   product     Product[]
+  carousels   CarouselPage[]    @relation("CarouselBrands")
 }
 
 model ProductSet {

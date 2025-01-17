@@ -11,11 +11,19 @@ type File {
     createdAt: String!
 }
 
+type ProductBrands {
+  id: ID!
+  name: String!
+  description: String
+  img: File
+}
+
 type CarouselPage {
   id: ID!
   title: String!
   description: String
   img: File
+  brand: ProductBrands
 }
 
 type CarouselPages {
@@ -25,12 +33,26 @@ type CarouselPages {
   updatedAt: String!
 }
 
+type DeleteResponse {
+    message: String!
+    deletedPage: CarouselPage
+}
+
+
 type Query {
   getCarouselPages: [CarouselPages!]!
 }
 
 type Mutation {
-  createCarouselPage(title: String!, description: String!, img: Upload!): CarouselPage!
+  createCarouselPage(title: String!, description: String, img: Upload! brandId: ID): CarouselPage!
+  updateCarouselPage(
+    id: ID!
+    title: String
+    description: String
+    img: Upload
+    brandId: ID
+  ): CarouselPage!
+  deleteCarouselPage(id: ID!): DeleteResponse!
 }
 
 `;
