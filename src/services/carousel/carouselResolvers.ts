@@ -1,6 +1,35 @@
 import { ApolloError } from 'apollo-server';
 import CarouselService from ".";
 
+export interface CreateCarouselPageProps {
+  title: string;
+  description?: string | undefined;
+  img: Promise<{
+    createReadStream: () => any;
+    filename: string;
+    mimetype: string;
+    encoding: string;
+  }>;
+  brandId?: number | string;
+  productId?: number | string;
+  disabled?: boolean;
+}
+
+export interface UpdateCarouselPageProps {
+  id: string;
+  title?: string;
+  description?: string;
+  img?: Promise<{
+    createReadStream: () => any;
+    filename: string;
+    mimetype: string;
+    encoding: string;
+  }>;
+  brandId?: number | string;
+  productId?: number | string;
+  disabled?: boolean;
+}
+
 const carouselResolvers = {
   Query: {
     getCarouselPages: async () => {
@@ -13,36 +42,45 @@ const carouselResolvers = {
     },
   },
   Mutation: {
-    createCarouselPage: async ( _: any, { title, description, img, brandId }: any ) => {
+    createCarouselPage: async (
+      _: any,
+      { title, description, img, brandId, productId, disabled }: CreateCarouselPageProps
+    ) => {
       try {
-        return await CarouselService.createCarouselPage( title, description, img, brandId );
+        const numericBrandId = brandId ? Number( brandId ) : undefined;
+        const numericProductId = productId ? Number( productId ) : undefined;
+
+        return await CarouselService.createCarouselPage(
+          title,
+          description,
+          img,
+          numericBrandId,
+          numericProductId,
+          disabled
+        );
       } catch ( error ) {
         console.error( "Error creating carousel page:", error );
         throw new Error( "Failed to create carousel page." );
       }
     },
+
     updateCarouselPage: async (
       _: any,
-      args: {
-        id: string;
-        title?: string;
-        description?: string;
-        img?: any;
-        brandId?: number;
-      },
+      { id, title, description, img, brandId, productId, disabled }: UpdateCarouselPageProps
     ) => {
-      const { id, title, description, img, brandId } = args;
-
       try {
-        const updatedCarouselPage = await CarouselService.updateCarouselPage(
+        const numericBrandId = brandId ? Number( brandId ) : undefined;
+        const numericProductId = productId ? Number( productId ) : undefined;
+
+        return await CarouselService.updateCarouselPage(
           id,
           title,
           description,
           img,
-          brandId
+          numericBrandId,
+          numericProductId,
+          disabled
         );
-
-        return updatedCarouselPage;
       } catch ( error ) {
         console.error( "Error updating carousel page:", error );
 
@@ -55,6 +93,7 @@ const carouselResolvers = {
         }
       }
     },
+
     deleteCarouselPage: async ( _: any, args: any ) => {
       const { id } = args;
       try {

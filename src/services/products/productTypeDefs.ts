@@ -13,6 +13,7 @@ type Product {
     description: String
     stock: Stock
     set: ProductSets!
+    slug: String
     brand: ProductBrands!
     preorder: Boolean!
 

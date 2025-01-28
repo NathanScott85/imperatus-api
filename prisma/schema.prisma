@@ -37,7 +37,10 @@ model CarouselPage {
   carouselPageId String?
   carouselPage CarouselPages? @relation("CarouselPages", fields: [carouselPageId], references: [id])
   brandId      Int?
-  brand        ProductBrands?  @relation("CarouselBrands", fields: [brandId], references: [id])
+  brand        ProductBrands? @relation("CarouselBrands", fields: [brandId], references: [id])
+  productId    Int?
+  product      Product?       @relation("CarouselProduct", fields: [productId], references: [id]) // Relation to Product
+  disabled     Boolean?       @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -95,6 +98,7 @@ model Product {
   preorder      Boolean?
   rrp           Decimal?      @db.Decimal(10, 2)
   description   String
+  slug          String?        @unique
   productTypeId Int
   stock         Stock?        @relation("ProductStock")
   brand         ProductBrands @relation(fields: [brandId], references: [id])
@@ -102,6 +106,7 @@ model Product {
   img           File?         @relation("ProductImage", fields: [imgId], references: [id])
   type          ProductType   @relation(fields: [productTypeId], references: [id])
   set           ProductSet    @relation(fields: [setId], references: [id])
+  carouselPages CarouselPage[] @relation("CarouselProduct")
 
   @@map("products")
 }

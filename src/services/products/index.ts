@@ -1,7 +1,8 @@
-import { Prisma, PrismaClient, ProductType } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import UploadService from "../upload";
 import { ApolloError } from "apollo-server";
 import { prisma } from "../../server";
+import { formatSlug } from '../../lib/'
 
 
 class ProductsService {
@@ -25,7 +26,7 @@ class ProductsService {
             set: true,
             brand: {
               include: {
-                img: true, // Include the image relation for brands
+                img: true,
               },
             },
           },
@@ -323,7 +324,6 @@ class ProductsService {
     rrp: number
   ): Promise<any> {
     try {
-      // Validate product type
       const [existingProductType, existingProduct] = await Promise.all( [
         prisma.productType.findUnique( {
           where: { id: productTypeId },
@@ -341,7 +341,6 @@ class ProductsService {
         );
       }
 
-      // Validate category
       if ( !categoryId ) {
         throw new Error( "Category ID is required to create a product." );
       }
@@ -355,21 +354,21 @@ class ProductsService {
       }
 
       const existingSet = await prisma.productSet.findUnique( {
-        where: { id: setId }
-      } )
+        where: { id: setId },
+      } );
 
       if ( !existingSet ) {
         throw new Error( "Invalid set. Please select a valid set." );
       }
 
       const existingBrand = await prisma.productBrands.findUnique( {
-        where: { id: brandId }
-      } )
+        where: { id: brandId },
+      } );
 
       if ( !existingBrand ) {
         throw new Error( "Invalid brand. Please select a valid brand." );
       }
-      // Create the product
+
       const product = await prisma.product.create( {
         data: {
           name,
@@ -394,11 +393,25 @@ class ProductsService {
         include: {
           stock: true,
           category: true,
-          type: true, // Include related type details
+          type: true,
         },
       } );
 
-      // Handle image upload
+
+      const slug = `${formatSlug( existingCategory.name )}/${product.id}/${formatSlug( name )}`;
+
+      const updatedProduct = await prisma.product.update( {
+        where: { id: product.id },
+        data: {
+          slug,
+        },
+        include: {
+          stock: true,
+          category: true,
+          type: true,
+        },
+      } );
+
       let fileRecord = null;
 
       if ( img ) {
@@ -408,7 +421,6 @@ class ProductsService {
         const { s3Url, key, fileName, contentType } =
           await UploadService.processUpload( stream, filename, mimetype );
 
-        // Create the file record
         fileRecord = await prisma.file.create( {
           data: {
             url: s3Url,
@@ -419,7 +431,7 @@ class ProductsService {
         } );
 
         await prisma.product.update( {
-          where: { id: product.id },
+          where: { id: updatedProduct.id },
           data: {
             imgId: fileRecord.id,
           },
@@ -427,7 +439,7 @@ class ProductsService {
       }
 
       return {
-        ...product,
+        ...updatedProduct,
         img: fileRecord,
       };
     } catch ( error ) {
@@ -575,30 +587,53 @@ class ProductsService {
           } );
         }
       }
-      // Validate ProductTypeId
+
       if ( productTypeId ) {
         const productTypeExists = await prisma.productType.findUnique( {
           where: { id: productTypeId },
         } );
 
         if ( !productTypeExists ) {
-          throw new Error(
-            `ProductType with ID ${productTypeId} does not exist.`
-          );
+          throw new Error( `ProductType with ID ${productTypeId} does not exist.` );
         }
       }
 
-      // Validate CategoryId
       if ( categoryId ) {
         const categoryExists = await prisma.category.findUnique( {
           where: { id: categoryId },
         } );
 
         if ( !categoryExists ) {
-          throw new Error(
-            `Category with ID ${categoryId} does not exist.`
-          );
+          throw new Error( `Category with ID ${categoryId} does not exist.` );
         }
+      }
+
+      const existingProduct = await prisma.product.findUnique( {
+        where: { id: parseInt( id ) },
+        include: { category: true },
+      } );
+
+      if ( !existingProduct ) {
+        throw new Error( `Product with ID ${id} does not exist.` );
+      }
+
+      const isNameChanged = name && name !== existingProduct.name;
+      const isCategoryChanged = categoryId && categoryId !== existingProduct.categoryId;
+
+      let updatedSlug = existingProduct.slug;
+
+      if ( isNameChanged || isCategoryChanged ) {
+        const updatedCategory = categoryId
+          ? await prisma.category.findUnique( { where: { id: categoryId } } )
+          : existingProduct.category;
+
+        if ( !updatedCategory ) {
+          throw new Error( `Invalid category for slug update.` );
+        }
+
+        updatedSlug = `${formatSlug( updatedCategory.name )}/${id}/${formatSlug(
+          name || existingProduct.name
+        )}`;
       }
 
       const product = await prisma.product.update( {
@@ -611,7 +646,8 @@ class ProductsService {
           preorder: preorder ?? undefined,
           rrp: rrp ?? undefined,
           imgId: fileRecord?.id ?? undefined,
-          categoryId,
+          categoryId: categoryId ?? undefined,
+          slug: isNameChanged || isCategoryChanged ? updatedSlug : undefined,
           stock: stock
             ? {
               update: {
@@ -628,35 +664,32 @@ class ProductsService {
           category: true,
           img: true,
           stock: true,
-          type: true, // Include product type for returning
+          type: true,
         },
       } );
 
-      if ( !product ) {
-        throw new ApolloError( "Product update failed. Product not found or invalid data.", "UPDATE_FAILED" );
-      }
       return {
         ...product,
         img: fileRecord,
       };
     } catch ( error ) {
-      console.error( "Error in updateProduct method:", error );
+      console.error( 'Error in updateProduct method:', error );
 
-      // Handle duplicate name error
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
+        error.code === 'P2002'
       ) {
         throw new Error(
-          "A product with this name already exists. Please choose a different name."
+          'A product with this name already exists. Please choose a different name.'
         );
       }
 
       throw new Error(
-        "An unexpected error occurred while updating the product. Please try again."
+        'An unexpected error occurred while updating the product. Please try again.'
       );
     }
   }
+
 
   public async deleteProduct( id: string ) {
     try {
