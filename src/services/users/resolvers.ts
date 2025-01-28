@@ -19,6 +19,7 @@ import categoriesResolvers from "../categories/categoriesResolvers";
 import productResolvers from "../products/productsResolvers";
 import userResolvers from "./userResolvers";
 import carouselResolvers from '../carousel/carouselResolvers'
+import promotionResolvers from '../promotions/promotionsResolvers';
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -27,6 +28,7 @@ const resolvers = {
     ...productResolvers.Query,
     ...userResolvers.Query,
     ...carouselResolvers.Query,
+    ...promotionResolvers.Query,
     getVerificationStatus: async ( _: any, { userId }: any ) => {
       const verification = await UserService.getVerificationStatus( userId );
       return verification;
