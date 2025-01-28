@@ -1,4 +1,34 @@
+import { ApolloError } from 'apollo-server';
 import CarouselService from ".";
+
+export interface CreateCarouselPageProps {
+  title: string;
+  description?: string | undefined;
+  img: Promise<{
+    createReadStream: () => any;
+    filename: string;
+    mimetype: string;
+    encoding: string;
+  }>;
+  brandId?: number | string;
+  productId?: number | string;
+  disabled?: boolean;
+}
+
+export interface UpdateCarouselPageProps {
+  id: string;
+  title?: string;
+  description?: string;
+  img?: Promise<{
+    createReadStream: () => any;
+    filename: string;
+    mimetype: string;
+    encoding: string;
+  }>;
+  brandId?: number | string;
+  productId?: number | string;
+  disabled?: boolean;
+}
 
 const carouselResolvers = {
   Query: {
@@ -12,12 +42,66 @@ const carouselResolvers = {
     },
   },
   Mutation: {
-    createCarouselPage: async ( _: any, { title, description, img }: any ) => {
+    createCarouselPage: async (
+      _: any,
+      { title, description, img, brandId, productId, disabled }: CreateCarouselPageProps
+    ) => {
       try {
-        return await CarouselService.createCarouselPage( title, description, img );
+        const numericBrandId = brandId ? Number( brandId ) : undefined;
+        const numericProductId = productId ? Number( productId ) : undefined;
+
+        return await CarouselService.createCarouselPage(
+          title,
+          description,
+          img,
+          numericBrandId,
+          numericProductId,
+          disabled
+        );
       } catch ( error ) {
         console.error( "Error creating carousel page:", error );
         throw new Error( "Failed to create carousel page." );
+      }
+    },
+
+    updateCarouselPage: async (
+      _: any,
+      { id, title, description, img, brandId, productId, disabled }: UpdateCarouselPageProps
+    ) => {
+      try {
+        const numericBrandId = brandId ? Number( brandId ) : undefined;
+        const numericProductId = productId ? Number( productId ) : undefined;
+
+        return await CarouselService.updateCarouselPage(
+          id,
+          title,
+          description,
+          img,
+          numericBrandId,
+          numericProductId,
+          disabled
+        );
+      } catch ( error ) {
+        console.error( "Error updating carousel page:", error );
+
+        if ( error instanceof Error ) {
+          throw new Error(
+            error.message || "An unexpected error occurred while updating the carousel page."
+          );
+        } else {
+          throw new Error( "An unexpected error occurred while updating the carousel page." );
+        }
+      }
+    },
+
+    deleteCarouselPage: async ( _: any, args: any ) => {
+      const { id } = args;
+      try {
+        const result = await CarouselService.deleteCarouselPage( id );
+        return result;
+      } catch ( error ) {
+        console.error( "Error deleting carousel page:", error );
+        throw new ApolloError( "Failed to delete carousel page." );
       }
     },
   },
