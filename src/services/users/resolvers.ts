@@ -1,8 +1,5 @@
-import { Prisma, ProductType } from "@prisma/client";
 import { prisma } from "../../server";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import {
-  ApolloError,
   AuthenticationError,
   UserInputError,
 } from "apollo-server";
@@ -73,6 +70,7 @@ const resolvers = {
     ...productResolvers.Mutation,
     ...userResolvers.Mutation,
     ...carouselResolvers.Mutation,
+    ...promotionResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {

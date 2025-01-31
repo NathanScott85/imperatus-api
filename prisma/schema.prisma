@@ -19,6 +19,7 @@ model File {
   brand       ProductBrands? @relation("BrandImage")
   product     Product?       @relation("ProductImage")
   carousel    CarouselPage?  @relation("CarouselImage")
+  promotion   Promotion?     @relation("PromotionImage")
 }
 
 model CarouselPages {
@@ -39,7 +40,7 @@ model CarouselPage {
   brandId      Int?
   brand        ProductBrands? @relation("CarouselBrands", fields: [brandId], references: [id])
   productId    Int?
-  product      Product?       @relation("CarouselProduct", fields: [productId], references: [id]) // Relation to Product
+  product      Product?       @relation("CarouselProduct", fields: [productId], references: [id])
   disabled     Boolean?       @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -48,9 +49,10 @@ model CarouselPage {
 model Promotion {
   id          Int       @id @default(autoincrement())
   title       String
+    imgId     Int?           @unique
+  img         File?       @relation("PromotionImage", fields: [imgId], references: [id])
   description String
-  imageUrl    String
-  slug        String    @unique
+  slug        String?    @unique
   startDate   DateTime
   endDate     DateTime
   createdAt   DateTime  @default(now())
