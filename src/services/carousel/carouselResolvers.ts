@@ -32,9 +32,23 @@ export interface UpdateCarouselPageProps {
 
 const carouselResolvers = {
   Query: {
-    getCarouselPages: async () => {
+    getCarouselPages: async (
+      _: unknown,
+      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search: string }
+    ) => {
       try {
-        return await CarouselService.getCarouselPages();
+        const { carouselPages, totalCount, totalPages, currentPage } = await CarouselService.getCarouselPages(
+          page,
+          limit,
+          search
+        );
+
+        return {
+          carouselPages,
+          totalCount,
+          totalPages,
+          currentPage,
+        };
       } catch ( error ) {
         console.error( "Error fetching carousel pages:", error );
         throw new Error( "Failed to fetch carousel pages." );

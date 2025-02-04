@@ -28,6 +28,13 @@ type CarouselPage {
   product: Product
 }
 
+type PaginatedCarouselPages {
+  carouselPages: [CarouselPages!]!
+  totalCount: Int!
+  totalPages: Int!
+  currentPage: Int!
+}
+
 type CarouselPages {
   id: ID!
   pages: [CarouselPage!]!
@@ -40,9 +47,8 @@ type DeleteResponse {
     deletedPage: CarouselPage
 }
 
-
 type Query {
-  getCarouselPages: [CarouselPages!]!
+  getCarouselPages(page: Int, limit: Int, search: String): PaginatedCarouselPages!
 }
 
 type Mutation {
