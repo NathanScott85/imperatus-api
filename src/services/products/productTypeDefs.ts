@@ -92,7 +92,7 @@ type PaginatedTypes {
 }
 
 type Query {
-    getAllProducts(page: Int, limit: Int): PaginatedProducts!
+    getAllProducts(page: Int, limit: Int, search: String): PaginatedProducts!
     getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
     getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
     getAllSets(page: Int, limit: Int, search: String): PaginatedSets!

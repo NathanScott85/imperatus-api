@@ -6,19 +6,29 @@ import { formatSlug } from '../../lib/'
 
 
 class ProductsService {
-  public async getAllProducts( page: number = 1, limit: number = 10 ) {
+  public async getAllProducts( page: number = 1, limit: number = 10, search: string = "" ) {
     try {
       const offset = ( page - 1 ) * limit;
+
+      const whereClause: Prisma.ProductWhereInput = search
+        ? {
+          OR: [
+            { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
+            { description: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          ],
+        }
+        : {};
 
       const [products, totalCount] = await Promise.all( [
         prisma.product.findMany( {
           skip: offset,
           take: limit,
+          where: whereClause,
           include: {
             category: {
               include: {
-                img: true
-              }
+                img: true,
+              },
             },
             stock: true,
             img: true,
@@ -31,7 +41,7 @@ class ProductsService {
             },
           },
         } ),
-        prisma.product.count(),
+        prisma.product.count( { where: whereClause } ),
       ] );
 
       return {

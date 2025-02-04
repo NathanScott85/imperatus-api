@@ -7,10 +7,10 @@ const productResolvers = {
   Query: {
     getAllProducts: async (
       _: unknown,
-      { page = 1, limit = 10 }: { page: number; limit: number },
+      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string }
     ) => {
       try {
-        const { products, totalCount, totalPages, currentPage } = await ProductsService.getAllProducts( page, limit );
+        const { products, totalCount, totalPages, currentPage } = await ProductsService.getAllProducts( page, limit, search );
         return {
           products,
           totalCount,

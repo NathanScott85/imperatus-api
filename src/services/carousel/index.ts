@@ -2,22 +2,43 @@ import { prisma } from "../../server";
 import UploadService from "../upload";
 
 class CarouselService {
-  public async getCarouselPages() {
-    return await prisma.carouselPages.findMany( {
-      include: {
-        pages: {
+  public async getCarouselPages( page: number = 1, limit: number = 10, search: string = "" ) {
+    try {
+      const offset = ( page - 1 ) * limit;
+
+      const [carouselPages, totalCount] = await Promise.all( [
+        prisma.carouselPages.findMany( {
+          skip: offset,
+          take: limit,
           include: {
-            img: true,
-            brand: {
+            pages: {
               include: {
-                img: true
-              }
-            },
-            product: true
-          },
-        },
-      },
-    } );
+                img: true,
+                brand: { include: { img: true } },
+                product: true
+              },
+              where: search ? {
+                OR: [
+                  { title: { contains: search, mode: "insensitive" } },
+                  { description: { contains: search, mode: "insensitive" } }
+                ]
+              } : undefined
+            }
+          }
+        } ),
+        prisma.carouselPages.count()
+      ] );
+
+      return {
+        carouselPages,
+        totalCount,
+        totalPages: Math.ceil( totalCount / limit ),
+        currentPage: page
+      };
+    } catch ( error ) {
+      console.error( "Error fetching carousel pages:", error );
+      throw new Error( "Failed to fetch carousel pages." );
+    }
   }
 
   public async createCarouselPage(
@@ -242,7 +263,6 @@ class CarouselService {
       throw new Error( "An unexpected error occurred while deleting the carousel page. Please try again." );
     }
   }
-
 }
 
 export default new CarouselService();
