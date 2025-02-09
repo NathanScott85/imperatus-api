@@ -23,12 +23,12 @@ class UserService {
             OR: [
               {
                 fullname: {
-                  contains: search.toLowerCase(),
+                  contains: search,
                 },
               },
               {
                 email: {
-                  contains: search.toLowerCase(),
+                  contains: search,
                 },
               },
             ],
@@ -48,12 +48,12 @@ class UserService {
             OR: [
               {
                 fullname: {
-                  contains: search.toLowerCase(),
+                  contains: search,
                 },
               },
               {
                 email: {
-                  contains: search.toLowerCase(),
+                  contains: search,
                 },
               },
             ],
