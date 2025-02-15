@@ -4,7 +4,6 @@ import { ApolloError } from "apollo-server";
 import { prisma } from "../../server";
 import { formatSlug } from '../../lib/'
 
-
 class ProductsService {
   public async getAllProducts( page: number = 1, limit: number = 10, search: string = "" ) {
     try {
@@ -33,6 +32,8 @@ class ProductsService {
             stock: true,
             img: true,
             type: true,
+            rarities: true,
+            variant: true,
             set: true,
             brand: {
               include: {
@@ -178,6 +179,133 @@ class ProductsService {
       throw new Error( `Unable to fetch sets, ${error}` );
     }
   }
+
+  public async getAllRarity( page: number = 1, limit: number = 10, search: string = "" ) {
+    try {
+      const offset = ( page - 1 ) * limit;
+
+      const [rarities, totalCount] = await Promise.all( [
+        prisma.rarity.findMany( {
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+          skip: offset,
+          take: limit,
+        } ),
+        prisma.rarity.count( {
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+        } ),
+      ] );
+
+      return {
+        rarities,
+        totalCount,
+        totalPages: Math.ceil( totalCount / limit ),
+        currentPage: page,
+      };
+    } catch ( error ) {
+      console.error( "Error retrieving rarities:", error );
+      throw new Error( "Failed to retrieve rarities" );
+    }
+  }
+
+  public async getAllProductVariants( page: number = 1, limit: number = 10, search: string = "" ) {
+    try {
+      const offset = ( page - 1 ) * limit;
+
+      const [variants, totalCount] = await Promise.all( [
+        prisma.productVariant.findMany( {
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+          skip: offset,
+          take: limit,
+        } ),
+        prisma.productVariant.count( {
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+        } ),
+      ] );
+
+      return {
+        variants, // Renamed from `variant` to `variants` for consistency
+        totalCount,
+        totalPages: Math.ceil( totalCount / limit ),
+        currentPage: page,
+      };
+    } catch ( error ) {
+      console.error( "Error retrieving product variants:", error );
+      throw new Error( "Failed to retrieve product variants" );
+    }
+  }
+
+  public async getAllCardTypes( page: number = 1, limit: number = 10, search: string = "" ) {
+    try {
+      const offset = ( page - 1 ) * limit;
+
+      const [cardTypes, totalCount] = await Promise.all( [
+        prisma.cardType.findMany( {
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+          skip: offset,
+          take: limit,
+          include: {
+            brand: true
+          }
+        } ),
+        prisma.productVariant.count( {
+          where: search
+            ? {
+              name: {
+                contains: search,
+                mode: "insensitive",
+              },
+            }
+            : undefined,
+        } ),
+      ] );
+
+      return {
+        cardTypes,
+        totalCount,
+        totalPages: Math.ceil( totalCount / limit ),
+        currentPage: page,
+      };
+    } catch ( error ) {
+      console.error( "Error retrieving product variants:", error );
+      throw new Error( "Failed to retrieve product variants" );
+    }
+  }
+
   public async getProductById( id: number ) {
     try {
       const product = await prisma.product.findUnique( {
@@ -311,6 +439,57 @@ class ProductsService {
       throw new Error(
         "An unexpected error occurred while creating the product set. Please try again."
       );
+    }
+  }
+
+  public async createRarity( name: string ) {
+    try {
+      return await prisma.rarity.create( {
+        data: {
+          name,
+        },
+      } );
+    } catch ( error ) {
+      console.error( "Error creating rarity:", error );
+      throw new Error( "Failed to create rarity" );
+    }
+  }
+
+  public async createVariant( name: string ) {
+    try {
+      return await prisma.productVariant.create( {
+        data: {
+          name,
+        },
+      } );
+    } catch ( error ) {
+      console.error( "Error creating rarity:", error );
+      throw new Error( "Failed to create rarity" );
+    }
+  }
+
+  public async createCardType( name: string, brandId: number ) {
+    try {
+      const existingBrand = await prisma.productBrands.findUnique( {
+        where: { id: brandId },
+      } );
+
+      if ( !existingBrand ) {
+        throw new Error( "Invalid brand. Please select a valid brand." );
+      }
+
+      return await prisma.cardType.create( {
+        data: {
+          name,
+          brandId
+        },
+        include: {
+          brand: true
+        }
+      } );
+    } catch ( error ) {
+      console.error( "Error creating card type:", error );
+      throw new Error( "Failed to create card type." );
     }
   }
 
@@ -700,6 +879,101 @@ class ProductsService {
     }
   }
 
+  public async updateVariant( id: number, name: string ): Promise<any> {
+    try {
+      const updatedVariant = await prisma.productVariant.update( {
+        where: { id },
+        data: { name },
+      } );
+
+      return updatedVariant;
+    } catch ( error ) {
+      console.error( 'Error in updateVariant method:', error );
+
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new Error( 'Variant not found.' );
+      }
+      throw new Error( 'An unexpected error occurred while updating the variant.' );
+    }
+  }
+
+  public async updateProductType( id: number, name: string ): Promise<any> {
+    try {
+      const existingType = await prisma.productType.findUnique( {
+        where: { id },
+      } );
+
+      if ( !existingType ) {
+        throw new Error( "Product type not found." );
+      }
+
+      return await prisma.productType.update( {
+        where: { id },
+        data: { name },
+      } );
+
+    } catch ( error ) {
+      console.error( "Error updating product type:", error );
+      throw new Error( "An unexpected error occurred while updating the product type." );
+    }
+  }
+
+  public async updateRarity( id: number, name: string ): Promise<any> {
+    try {
+      const existingRarity = await prisma.rarity.findUnique( {
+        where: { id },
+      } );
+
+      if ( !existingRarity ) {
+        throw new Error( "Rarity not found." );
+      }
+
+      return await prisma.rarity.update( {
+        where: { id },
+        data: { name },
+      } );
+
+    } catch ( error ) {
+      console.error( "Error updating rarity:", error );
+      throw new Error( "An unexpected error occurred while updating the rarity." );
+    }
+  }
+
+  public async updateCardType( id: number, name: string, brandId: number ) {
+    console.log( "Updating CardType in DB:", typeof id, id, typeof brandId, brandId );
+
+    try {
+      const existingCardType = await prisma.cardType.findUnique( {
+        where: { id: Number( id ) },
+      } );
+
+      if ( !existingCardType ) {
+        throw new Error( "Card type not found." );
+      }
+
+      const existingBrand = await prisma.productBrands.findUnique( {
+        where: { id: Number( brandId ) },
+      } );
+
+      if ( !existingBrand ) {
+        throw new Error( "Invalid brand. Please select a valid brand." );
+      }
+
+      return await prisma.cardType.update( {
+        where: { id },
+        data: {
+          name,
+          brandId,
+        },
+      } );
+    } catch ( error ) {
+      console.error( "Error updating card type:", error );
+      throw new Error( "Failed to update card type." );
+    }
+  }
 
   public async deleteProduct( id: string ) {
     try {
@@ -753,7 +1027,6 @@ class ProductsService {
         );
       }
 
-
       if ( brand.imgId && brand.img ) {
         await UploadService.deleteFileFromS3( brand.img.key );
         await prisma.file.delete( {
@@ -795,7 +1068,29 @@ class ProductsService {
     }
   }
 
+  public async deleteCardType( id: string ): Promise<{ success: boolean; message: string }> {
+    try {
+      const existingCardType = await prisma.cardType.findUnique( {
+        where: { id: parseInt( id ) },
+      } );
 
+      if ( !existingCardType ) {
+        throw new Error( "Card type not found." );
+      }
+
+      await prisma.cardType.delete( {
+        where: { id: parseInt( id ) },
+      } );
+
+      return {
+        success: true,
+        message: "Card type deleted successfully.",
+      };
+    } catch ( error ) {
+      console.error( "Error in deleteCardType method:", error );
+      throw new Error( "An unexpected error occurred while deleting the card type." );
+    }
+  }
 }
 
 export default new ProductsService();

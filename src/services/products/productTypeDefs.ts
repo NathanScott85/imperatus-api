@@ -16,7 +16,18 @@ type Product {
     slug: String
     brand: ProductBrands!
     preorder: Boolean!
+    rarities: [Rarity!]!
+    variant: ProductVariant
+}
 
+type Rarity {
+    id: ID!
+    name: String!
+}
+
+type ProductVariant {
+    id: ID!
+    name: String!
 }
 
 scalar Upload
@@ -77,6 +88,20 @@ type PaginatedSets {
     currentPage: Int!
 }
 
+type PaginatedRarities {
+    rarities: [Rarity!]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int!
+}
+
+type PaginatedVariants {
+    variants: [ProductVariant!]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int!
+}
+
 type ProductSets {
     id: ID!
     setName: String!
@@ -91,11 +116,28 @@ type PaginatedTypes {
     currentPage: Int! 
 }
 
+type CardType {
+    id: ID!
+    name: String!
+    brandId: ID!
+    brand: ProductBrands!
+}
+
+type PaginatedCardTypes { 
+    cardTypes: [CardType]!
+    totalCount: Int!
+    totalPages: Int!
+    currentPage: Int! 
+}
+
 type Query {
     getAllProducts(page: Int, limit: Int, search: String): PaginatedProducts!
     getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
     getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
     getAllSets(page: Int, limit: Int, search: String): PaginatedSets!
+    getAllRarity(page: Int, limit: Int, search: String): PaginatedRarities!
+    getAllVariants(page: Int, limit: Int, search: String): PaginatedVariants!
+    getAllCardTypes(page: Int, limit: Int, search: String): PaginatedCardTypes!
     getProductById(id: ID!): Product
 }
 
@@ -115,6 +157,9 @@ type Mutation {
    createProductType(input: ProductTypeInput!): ProductType!
    createProductBrand(name: String, description: String, img: Upload): ProductBrands
    createProductSet(setName: String, setCode: String, description: String): ProductSets
+   createRarity(name: String!): Rarity 
+   createVariant(name: String!): ProductVariant  
+   createCardType(name: String!, brandId: Int): CardType
    createProduct(
         name: String!
         price: Float!
@@ -143,12 +188,19 @@ type Mutation {
         stockPreorder: Boolean
         preorder: Boolean
         rrp: Float
+        variantId: Int
+        rarityIds: [Int]
     ): Product!
+    updateProductType(id: Int!, name: String!): ProductType!
     updateProductBrand(id: ID!, name: String!, description: String, img: Upload): ProductBrands!
-    updateProductSet(id: ID! setName: String!, setCode: String!, description: String): ProductSets!
+    updateProductSet(id: ID!, setName: String!, setCode: String!, description: String): ProductSets!
+    updateVariant(id: Int!, name: String!): ProductVariant!
+    updateRarity(id: Int!, name: String!): Rarity!
+    updateCardType(id: Int!, name: String!, brandId: Int!): CardType
     deleteProduct(id: ID!): Message!
     deleteBrand(id: ID!): Message!
     deleteSet(id: ID!): Message!
+    deleteCardType(id: ID!): Message!
 }
 
 `;

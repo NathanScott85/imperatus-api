@@ -22,6 +22,7 @@ const productResolvers = {
         throw new Error( "Failed to retrieve products" );
       }
     },
+
     getAllProductTypes: async (
       _: unknown,
       { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
@@ -29,6 +30,19 @@ const productResolvers = {
       const { types, totalCount, totalPages, currentPage } = await ProductsService.getAllProductTypes( page, limit, search );
       return {
         types,
+        totalCount,
+        totalPages,
+        currentPage,
+      };
+    },
+
+    getAllCardTypes: async (
+      _: unknown,
+      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
+    ) => {
+      const { cardTypes, totalCount, totalPages, currentPage } = await ProductsService.getAllCardTypes( page, limit, search );
+      return {
+        cardTypes,
         totalCount,
         totalPages,
         currentPage,
@@ -59,6 +73,36 @@ const productResolvers = {
       }
     },
 
+    getAllRarity: async (
+      _: unknown,
+      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string } ) => {
+      const { rarities, totalCount, totalPages, currentPage } = await ProductsService.getAllRarity( page, limit, search );
+      return {
+        rarities,
+        totalCount,
+        totalPages,
+        currentPage
+      }
+    },
+
+    getAllVariants: async (
+      _: unknown,
+      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string }
+    ) => {
+      try {
+        const { variants, totalCount, totalPages, currentPage } = await ProductsService.getAllProductVariants( page, limit, search );
+        return {
+          variants,
+          totalCount,
+          totalPages,
+          currentPage,
+        };
+      } catch ( error ) {
+        console.error( "Error retrieving product variants:", error );
+        throw new Error( "Failed to retrieve product variants" );
+      }
+    },
+
     getProductById: async ( _: any, args: { id: string } ) => {
       try {
         return await ProductsService.getProductById( parseInt( args.id ) );
@@ -68,6 +112,7 @@ const productResolvers = {
       }
     },
   },
+
   Mutation: {
     createProductType: async ( _: any, { input }: { input: { name: string } } ) => {
       try {
@@ -107,6 +152,33 @@ const productResolvers = {
       }
     },
 
+    createRarity: async ( _: any, { name }: { name: string } ) => {
+      try {
+        return ProductsService.createRarity( name );
+      } catch ( error ) {
+        console.error( "Error in createRarity resolver:", error );
+        throw new Error( "Failed to create rarity" );
+      }
+    },
+
+    createVariant: async ( _: any, { name }: { name: string } ) => {
+      try {
+        return ProductsService.createVariant( name );
+      } catch ( error ) {
+        console.error( "Error in create variant resolver:", error );
+        throw new Error( "Failed to create variant" );
+      }
+    },
+
+    createCardType: async ( _: any, { name, brandId }: { name: string, brandId: number } ) => {
+      try {
+        return ProductsService.createCardType( name, brandId );
+      } catch ( error ) {
+        console.error( "Error in create card type resolver:", error );
+        throw new Error( "Failed to create card type" );
+      }
+    },
+
     createProduct: async ( _: any, args: any ) => {
       const {
         name,
@@ -142,6 +214,7 @@ const productResolvers = {
         throw new Error( "Failed to create product." );
       }
     },
+
     updateProduct: async (
       _: any,
       {
@@ -215,6 +288,7 @@ const productResolvers = {
       }
 
     },
+
     async updateProductBrand( _: any, { id, name, description, img }: any ) {
       try {
         return await ProductsService.updateProductBrand( parseInt( id, 10 ), name, description, img );
@@ -230,6 +304,63 @@ const productResolvers = {
       } catch ( error ) {
         console.error( "Error in updateProductBrand resolver:", error );
         throw new Error( "Failed to update product brand." );
+      }
+    },
+
+    async updateVariant( _: any, { id, name }: any ) {
+      try {
+        return await ProductsService.updateVariant( parseInt( id, 10 ), name );
+      } catch ( error ) {
+        console.error( "Error in updateVariant resolver:", error );
+        throw new Error( "Failed to update variant." );
+      }
+    },
+
+    async updateProductType( _: any, { id, name }: { id: number; name: string } ) {
+      try {
+        return await ProductsService.updateProductType( id, name );
+      } catch ( error ) {
+        console.error( "Error in updateProductType resolver:", error );
+        throw new Error( "Failed to update product type." );
+      }
+    },
+
+    async updateRarity( _: any, { id, name }: { id: number; name: string } ) {
+      try {
+        return await ProductsService.updateRarity( id, name );
+      } catch ( error ) {
+        console.error( "Error in updateRarity resolver:", error );
+        throw new Error( "Failed to update rarity." );
+      }
+    },
+
+    updateCardType: async (
+      _: any,
+      { id, name, brandId }: { id: number; name: string; brandId: number },
+      { user }: any
+    ) => {
+      if ( !user ) {
+        throw new AuthenticationError( "You must be logged in" );
+      }
+
+      if ( !isAdminOrOwner( user ) ) {
+        throw new AuthenticationError( "Permission denied" );
+      }
+
+      try {
+        console.log( "Received ID in resolver:", typeof id, id );
+        console.log( "Received brandId in resolver:", typeof brandId, brandId );
+        const result = await ProductsService.updateCardType( id, name, Number( brandId ) );
+
+        if ( !result ) {
+          console.error( "Result is null or undefined, throwing ApolloError." );
+          throw new ApolloError( "Failed to update card type - no result returned" );
+        }
+
+        return result;
+      } catch ( error ) {
+        console.error( "Error caught in updateCardType resolver:", error );
+        throw new ApolloError( "Failed to update card type", "UPDATE_FAILED" );
       }
     },
 
@@ -253,6 +384,7 @@ const productResolvers = {
         throw new ApolloError( "Failed to delete product", "DELETE_FAILED" );
       }
     },
+
     deleteBrand: async (
       _: any,
       args: { id: string },
@@ -273,6 +405,7 @@ const productResolvers = {
         throw new ApolloError( "Failed to delete brand", "DELETE_FAILED" );
       }
     },
+
     deleteSet: async (
       _: any,
       args: { id: string },
@@ -301,8 +434,37 @@ const productResolvers = {
         throw new ApolloError( "Failed to delete set", "DELETE_FAILED" );
       }
     },
-  },
 
+    deleteCardType: async (
+      _: any,
+      args: { id: string },
+      { user }: any
+    ): Promise<{ message: string }> => {
+
+      if ( !user ) {
+        console.log( "No user found in context. Throwing AuthenticationError." );
+        throw new AuthenticationError( "You must be logged in" );
+      }
+
+      if ( !isAdminOrOwner( user ) ) {
+        throw new AuthenticationError( "Permission denied" );
+      }
+
+      try {
+        const result = await ProductsService.deleteCardType( args.id );
+
+        if ( !result ) {
+          console.error( "Result is null or undefined, throwing ApolloError." );
+          throw new ApolloError( "Failed to delete card type - no result returned" );
+        }
+
+        return result;
+      } catch ( error ) {
+        console.error( "Error caught in deleteCardType resolver:", error );
+        throw new ApolloError( "Failed to delete card type", "DELETE_FAILED" );
+      }
+    }
+  },
 };
 
 export default productResolvers;
