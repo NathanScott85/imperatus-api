@@ -5,24 +5,76 @@ import { prisma } from "../../server";
 import { formatSlug } from '../../lib/'
 
 class ProductsService {
-  public async getAllProducts( page: number = 1, limit: number = 10, search: string = "" ) {
+  public async getAllProducts(
+    page: number = 1,
+    limit: number = 10,
+    search: string = "",
+    filters: {
+      brandId?: number;
+      setId?: number;
+      variantId?: number;
+      rarityIds?: number[];
+      cardTypeId?: number;
+      productTypeId?: number;
+      priceMin?: number;
+      priceMax?: number;
+      preorder?: boolean;
+      stockMin?: number;
+      stockMax?: number;
+    } = {}
+  ) {
     try {
       const offset = ( page - 1 ) * limit;
 
-      const whereClause: Prisma.ProductWhereInput = search
-        ? {
+      const whereClause: Prisma.ProductWhereInput = {
+        ...( search && {
           OR: [
             { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
             { description: { contains: search, mode: Prisma.QueryMode.insensitive } },
           ],
-        }
-        : {};
+        } ),
+        ...( filters.brandId && { brandId: filters.brandId } ),
+        ...( filters.setId && { setId: filters.setId } ),
+        ...( filters.variantId && { variantId: filters.variantId } ),
+        ...( filters.productTypeId && { productTypeId: filters.productTypeId } ),
+        ...( filters.cardTypeId && { cardTypeId: filters.cardTypeId } ),
+        ...( filters.preorder !== undefined && { preorder: filters.preorder } ),
+        ...( filters.priceMin !== undefined || filters.priceMax !== undefined
+          ? {
+            price: {
+              ...( filters.priceMin !== undefined ? { gte: filters.priceMin } : {} ),
+              ...( filters.priceMax !== undefined ? { lte: filters.priceMax } : {} ),
+            },
+          }
+          : {} ),
+        ...( filters.stockMin !== undefined || filters.stockMax !== undefined
+          ? {
+            stock: {
+              is: {
+                amount: {
+                  ...( filters.stockMin !== undefined ? { gte: filters.stockMin } : {} ),
+                  ...( filters.stockMax !== undefined ? { lte: filters.stockMax } : {} ),
+                },
+              },
+            },
+          }
+          : {} ),
+
+        ...( filters.rarityIds && filters.rarityIds.length > 0 && {
+          rarities: {
+            some: {
+              rarityId: { in: filters.rarityIds },
+            },
+          },
+        } ),
+      };
+      console.log( "Final Prisma Where Clause:", JSON.stringify( whereClause, null, 2 ) );
 
       const [products, totalCount] = await Promise.all( [
         prisma.product.findMany( {
           skip: offset,
           take: limit,
-          where: whereClause,
+          where: whereClause,  // ✅ Apply filters directly on products
           include: {
             category: {
               include: {
@@ -35,6 +87,7 @@ class ProductsService {
             rarities: true,
             variant: true,
             set: true,
+            cardType: true,
             brand: {
               include: {
                 img: true,
@@ -46,6 +99,7 @@ class ProductsService {
       ] );
 
       return {
+        filters,
         products,
         totalCount,
         totalPages: Math.ceil( totalCount / limit ),
@@ -315,7 +369,7 @@ class ProductsService {
           img: true,
           category: true,
           type: true,
-          brand: true
+          brand: true,
         },
       } );
 
@@ -501,7 +555,6 @@ class ProductsService {
     img: any,
     categoryId: number,
     brandId: number,
-    setId: number,
     stock: {
       amount: number;
       sold: number;
@@ -510,65 +563,57 @@ class ProductsService {
       preorder: boolean;
     },
     preorder: boolean,
-    rrp: number
+    rrp: number,
+    variantId?: number,
+    cardTypeId?: number,
+    setId?: number,
   ): Promise<any> {
     try {
-      const [existingProductType, existingProduct] = await Promise.all( [
-        prisma.productType.findUnique( {
-          where: { id: productTypeId },
-        } ),
-        prisma.product.findFirst( {
-          where: { name: name.toLowerCase() },
-        } ),
+      const [
+        existingProductType,
+        existingCardType,
+        existingVariant,
+        existingCategory,
+        existingSet,
+        existingBrand
+      ] = await Promise.all( [
+        prisma.productType.findUnique( { where: { id: productTypeId } } ),
+        cardTypeId ? prisma.cardType.findUnique( { where: { id: cardTypeId } } ) : null,
+        variantId ? prisma.productVariant.findUnique( { where: { id: variantId } } ) : null,
+        prisma.category.findUnique( { where: { id: categoryId } } ),
+        setId ? prisma.productSet.findUnique( { where: { id: setId } } ) : null,
+        prisma.productBrands.findUnique( { where: { id: brandId } } ),
       ] );
 
-      if ( !existingProductType || existingProduct ) {
-        throw new Error(
-          !existingProductType
-            ? "Invalid product type. Please select a valid product type."
-            : "A product with this name already exists. Please choose a different name."
-        );
+      if ( !existingProductType ) {
+        throw new Error( "Invalid product type. Please select a valid product type." );
       }
 
-      if ( !categoryId ) {
-        throw new Error( "Category ID is required to create a product." );
+      if ( variantId && !existingVariant ) {
+        throw new Error( "Invalid product variant. Please select a valid product variant." );
       }
 
-      const existingCategory = await prisma.category.findUnique( {
-        where: { id: categoryId },
-      } );
-
-      if ( !existingCategory ) {
-        throw new Error( "Invalid category. Please select a valid category." );
+      if ( cardTypeId && !existingCardType ) {
+        throw new Error( "Invalid card type. Please select a valid card type." );
       }
 
-      const existingSet = await prisma.productSet.findUnique( {
-        where: { id: setId },
-      } );
-
-      if ( !existingSet ) {
-        throw new Error( "Invalid set. Please select a valid set." );
-      }
-
-      const existingBrand = await prisma.productBrands.findUnique( {
-        where: { id: brandId },
-      } );
-
-      if ( !existingBrand ) {
-        throw new Error( "Invalid brand. Please select a valid brand." );
+      if ( !existingCategory || !existingBrand || ( setId && !existingSet ) ) {
+        throw new Error( "Invalid category, set, or brand. Please select valid options." );
       }
 
       const product = await prisma.product.create( {
         data: {
           name,
           price,
-          productTypeId: existingProductType!.id,
+          productTypeId: existingProductType.id,
+          cardTypeId: existingCardType ? existingCardType.id : null,
+          variantId: existingVariant ? existingVariant.id : null,
           description,
           preorder,
           rrp,
           categoryId,
           brandId,
-          setId,
+          setId: existingSet ? existingSet.id : null,
           stock: {
             create: {
               amount: stock.amount,
@@ -583,21 +628,26 @@ class ProductsService {
           stock: true,
           category: true,
           type: true,
+          cardType: true,
+          brand: true,
+          set: true,
+          variant: true,
         },
       } );
-
 
       const slug = `${formatSlug( existingCategory.name )}/${product.id}/${formatSlug( name )}`;
 
       const updatedProduct = await prisma.product.update( {
         where: { id: product.id },
-        data: {
-          slug,
-        },
+        data: { slug },
         include: {
           stock: true,
           category: true,
           type: true,
+          cardType: true,
+          brand: true,
+          set: true,
+          variant: true,
         },
       } );
 
@@ -607,39 +657,22 @@ class ProductsService {
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
 
-        const { s3Url, key, fileName, contentType } =
-          await UploadService.processUpload( stream, filename, mimetype );
+        const { s3Url, key, fileName, contentType } = await UploadService.processUpload( stream, filename, mimetype );
+        const uniqueFileName = `${Date.now()}-${fileName}`;
 
         fileRecord = await prisma.file.create( {
-          data: {
-            url: s3Url,
-            key,
-            fileName,
-            contentType,
-          },
+          data: { url: s3Url, key, fileName: uniqueFileName, contentType },
         } );
 
         await prisma.product.update( {
           where: { id: updatedProduct.id },
-          data: {
-            imgId: fileRecord.id,
-          },
+          data: { imgId: fileRecord.id },
         } );
       }
 
-      return {
-        ...updatedProduct,
-        img: fileRecord,
-      };
+      return { ...updatedProduct, img: fileRecord };
     } catch ( error ) {
       console.error( "Error in createProduct method:", error );
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        throw new Error( "A product with this name already exists. Please choose a different name." );
-      }
-
       throw new Error( "An unexpected error occurred while creating the product. Please try again." );
     }
   }

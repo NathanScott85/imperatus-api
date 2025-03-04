@@ -21,24 +21,54 @@ const categoryTypeDefs = gql`
   }
 
   type Category {
-    id: ID!
-    name: String!
-    description: String
-    img: File
-    type: CategoryType
-    products: [Product!]!
+      id: ID!
+      name: String!
+      description: String
+      img: File
+      type: CategoryType
+      products: [Product!]!
+      totalCount: Int!
+      totalPages: Int!
+      currentPage: Int!
   }
 
+  input CategoryFilters {
+    brandId: Int
+    variantId: Int
+    # rarityId: Int
+    setId: Int
+    productTypeId: Int
+    preorder: Boolean
+    priceMin: Float
+    priceMax: Float
+    stockMin: Int
+    stockMax: Int
+  }
+
+  type Filters {
+    brandId: Int
+    variantId: Int
+    # rarityId: Int
+    setId: Int
+    productTypeId: Int
+    preorder: Boolean
+    priceMin: Float
+    priceMax: Float
+    stockMin: Int
+    stockMax: Int
+  }
+  
   type PaginatedCategories {
     categories: [Category!]!
+    filters: Filters
     totalCount: Int!
     totalPages: Int!
     currentPage: Int!
   }
 
   type Query {
-    getAllCategories(page: Int, limit: Int, search: String): PaginatedCategories!
-    getCategoryById(id: ID!): Category
+    getAllCategories(page: Int, limit: Int, search: String, filters: CategoryFilters): PaginatedCategories!
+    getCategoryById(id: ID!, page: Int, limit: Int): Category
     getCategoryByName(name: String!): Category
     getAllCategoryTypes: [CategoryType!]!
     getCategoryTypeById(id: String!): CategoryType

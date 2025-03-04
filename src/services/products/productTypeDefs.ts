@@ -12,13 +12,28 @@ type Product {
     rrp: Float
     description: String
     stock: Stock
-    set: ProductSets!
+    set: ProductSets
     slug: String
     brand: ProductBrands!
     preorder: Boolean!
     rarities: [Rarity!]!
     variant: ProductVariant
-}
+    cardType: CardType
+  }
+
+input ProductFilters {
+    brandId: Int
+    setId: Int
+    variantId: Int
+    rarityIds: [Int]
+    cardTypeId: Int
+    productTypeId: Int
+    priceMin: Float
+    priceMax: Float
+    preorder: Boolean
+    stockMin: Int
+    stockMax: Int
+  }
 
 type Rarity {
     id: ID!
@@ -131,7 +146,12 @@ type PaginatedCardTypes {
 }
 
 type Query {
-    getAllProducts(page: Int, limit: Int, search: String): PaginatedProducts!
+    getAllProducts(
+      page: Int
+      limit: Int
+      search: String
+      filters: ProductFilters
+    ): PaginatedProducts!
     getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
     getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
     getAllSets(page: Int, limit: Int, search: String): PaginatedSets!
@@ -169,6 +189,7 @@ type Mutation {
         description: String
         img: Upload
         categoryId: Int
+        cardTypeId: Int
         stock: StockInput
         preorder: Boolean!
         rrp: Float

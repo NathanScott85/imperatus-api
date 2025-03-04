@@ -7,11 +7,36 @@ const productResolvers = {
   Query: {
     getAllProducts: async (
       _: unknown,
-      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string }
+      {
+        page = 1,
+        limit = 10,
+        search = "",
+        filters = {}
+      }: {
+        page: number;
+        limit: number;
+        search?: string;
+        filters?: {
+          brandId?: number;
+          setId?: number;
+          variantId?: number;
+          rarityIds?: number[];
+          cardTypeId?: number;
+          productTypeId?: number;
+          priceMin?: number;
+          priceMax?: number;
+          preorder?: boolean;
+          stockMin?: number
+          stockMax?: number
+        };
+      }
     ) => {
       try {
-        const { products, totalCount, totalPages, currentPage } = await ProductsService.getAllProducts( page, limit, search );
+        const { products, totalCount, totalPages, currentPage } = await ProductsService.getAllProducts(
+          page, limit, search, filters
+        );
         return {
+          filters,
           products,
           totalCount,
           totalPages,
@@ -22,6 +47,7 @@ const productResolvers = {
         throw new Error( "Failed to retrieve products" );
       }
     },
+
 
     getAllProductTypes: async (
       _: unknown,
@@ -188,10 +214,12 @@ const productResolvers = {
         img,
         categoryId,
         brandId,
-        setId,
         stock,
         preorder,
         rrp,
+        variantId,
+        cardTypeId,
+        setId,
       } = args;
       try {
         const newProduct = await ProductsService.createProduct(
@@ -202,10 +230,12 @@ const productResolvers = {
           img,
           categoryId,
           brandId,
-          setId,
           stock,
           preorder,
-          rrp
+          rrp,
+          variantId,
+          cardTypeId,
+          setId,
         );
 
         return newProduct;
