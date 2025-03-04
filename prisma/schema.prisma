@@ -49,7 +49,7 @@ model CarouselPage {
 model Promotion {
   id          Int       @id @default(autoincrement())
   title       String
-    imgId     Int?           @unique
+  imgId       Int?           @unique
   img         File?       @relation("PromotionImage", fields: [imgId], references: [id])
   description String
   slug        String?    @unique
@@ -76,21 +76,41 @@ model Category {
   products       Product[]    @relation("CategoryProducts")
 }
 
+model Rarity {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  products  ProductRarity[]
+}
+
+model ProductVariant {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  products  Product[]
+}
+
 model ProductType {
   id      Int       @id @default(autoincrement())
   name    String    @unique
   product Product[]
 }
 
+model CardType {
+  id        Int            @id @default(autoincrement())
+  name      String
+  brandId   Int
+  brand     ProductBrands? @relation("BrandCardTypes", fields: [brandId], references: [id])
+  products  Product[]      @relation("ProductCardType")
+}
 
 model ProductBrands {
-  id          Int               @id @default(autoincrement())
-  imgId       Int?              @unique
-  name        String            @unique
+  id          Int            @id @default(autoincrement())
+  imgId       Int?           @unique
+  name        String         @unique
   description String
-  img         File?             @relation("BrandImage", fields: [imgId], references: [id])
+  img         File?          @relation("BrandImage", fields: [imgId], references: [id])
   product     Product[]
-  carousels   CarouselPage[]    @relation("CarouselBrands")
+  carousels   CarouselPage[] @relation("CarouselBrands")
+  cardTypes   CardType[]     @relation("BrandCardTypes")
 }
 
 model ProductSet {
@@ -105,24 +125,44 @@ model Product {
   id            Int           @id @default(autoincrement())
   categoryId    Int
   brandId       Int
-  setId         Int
+  setId         Int?
   imgId         Int?          @unique
   name          String
   price         Decimal?      @db.Decimal(10, 2)
   preorder      Boolean?
   rrp           Decimal?      @db.Decimal(10, 2)
   description   String
-  slug          String?        @unique
+  slug          String?       @unique
   productTypeId Int
+  variantId     Int?
+  cardTypeId    Int?
   stock         Stock?        @relation("ProductStock")
   brand         ProductBrands @relation(fields: [brandId], references: [id])
   category      Category      @relation("CategoryProducts", fields: [categoryId], references: [id])
   img           File?         @relation("ProductImage", fields: [imgId], references: [id])
   type          ProductType   @relation(fields: [productTypeId], references: [id])
-  set           ProductSet    @relation(fields: [setId], references: [id])
+  set           ProductSet?    @relation(fields: [setId], references: [id])
+  variant       ProductVariant? @relation(fields: [variantId], references: [id])
+  rarities      ProductRarity[]
+  cardType      CardType?     @relation("ProductCardType", fields: [cardTypeId], references: [id])
   carouselPages CarouselPage[] @relation("CarouselProduct")
 
   @@map("products")
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([setId])
+  @@index([productTypeId])
+  @@index([variantId])
+  @@index([cardTypeId])
+}
+
+model ProductRarity {
+  productId Int
+  rarityId  Int
+  product Product @relation(fields: [productId], references: [id])
+  rarity  Rarity  @relation(fields: [rarityId], references: [id])
+
+  @@id([productId, rarityId])
 }
 
 model Stock {
