@@ -20,6 +20,7 @@ import promotionResolvers from '../promotions/promotionsResolvers';
 import productSetResolvers from '../product-sets/productSetResolvers';
 import brandsResolvers from '../brands/brandsResolvers';
 import productTypesResolvers from '../product-type/productTypeResolvers';
+import rarityResolvers from '../card-rarity/cardRarityResolvers';
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -32,6 +33,7 @@ const resolvers = {
     ...productSetResolvers.Query,
     ...brandsResolvers.Query,
     ...productTypesResolvers.Query,
+    ...rarityResolvers.Query,
     getVerificationStatus: async ( _: any, { userId }: any ) => {
       const verification = await UserService.getVerificationStatus( userId );
       return verification;
@@ -80,6 +82,7 @@ const resolvers = {
     ...productSetResolvers.Mutation,
     ...brandsResolvers.Mutation,
     ...productTypesResolvers.Mutation,
+    ...rarityResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {

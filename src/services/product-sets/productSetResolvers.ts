@@ -46,7 +46,7 @@ const productSetResolvers = {
     ): Promise<{ message: string }> => {
 
       if ( !user ) {
-        console.log( "No user found in context. Throwing AuthenticationError." );
+        console.error( "No user found in context. Throwing AuthenticationError." );
         throw new AuthenticationError( "You must be logged in" );
       }
 

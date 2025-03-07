@@ -16,7 +16,6 @@ class UserService {
   ) {
     try {
       const offset = ( page - 1 ) * limit;
-      console.log( search, 'search' );
       const [users, totalCount] = await Promise.all( [
         prisma.user.findMany( {
           where: {
