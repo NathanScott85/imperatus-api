@@ -111,14 +111,17 @@ model ProductBrands {
   product     Product[]
   carousels   CarouselPage[] @relation("CarouselBrands")
   cardTypes   CardType[]     @relation("BrandCardTypes")
+  sets        ProductSet[]   @relation("ProductBrandSets")
 }
 
 model ProductSet {
-  id          Int       @id @default(autoincrement())
-  setName     String    @unique
+  id          Int            @id @default(autoincrement())
+  setName     String         @unique
   description String
-  setCode     String    @unique
+  setCode     String         @unique
   product     Product[]
+  brandId     Int           
+  brand       ProductBrands? @relation("ProductBrandSets", fields: [brandId], references: [id])
 }
 
 model Product {

@@ -1,7 +1,6 @@
 import { gql } from "apollo-server";
 
 const productTypeDefs = gql`
-
 type Product {
     id: ID!
     category: Category!
@@ -96,13 +95,6 @@ type PaginatedBrands {
     currentPage: Int!
 }
 
-type PaginatedSets {
-    sets: [ProductSets]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int!
-}
-
 type PaginatedRarities {
     rarities: [Rarity!]!
     totalCount: Int!
@@ -115,13 +107,6 @@ type PaginatedVariants {
     totalCount: Int!
     totalPages: Int!
     currentPage: Int!
-}
-
-type ProductSets {
-    id: ID!
-    setName: String!
-    setCode: String!
-    description: String
 }
 
 type PaginatedTypes { 
@@ -154,7 +139,6 @@ type Query {
     ): PaginatedProducts!
     getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
     getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
-    getAllSets(page: Int, limit: Int, search: String): PaginatedSets!
     getAllRarity(page: Int, limit: Int, search: String): PaginatedRarities!
     getAllVariants(page: Int, limit: Int, search: String): PaginatedVariants!
     getAllCardTypes(page: Int, limit: Int, search: String): PaginatedCardTypes!
@@ -176,7 +160,6 @@ input StockInput {
 type Mutation {
    createProductType(input: ProductTypeInput!): ProductType!
    createProductBrand(name: String, description: String, img: Upload): ProductBrands
-   createProductSet(setName: String, setCode: String, description: String): ProductSets
    createRarity(name: String!): Rarity 
    createVariant(name: String!): ProductVariant  
    createCardType(name: String!, brandId: Int): CardType
@@ -214,13 +197,11 @@ type Mutation {
     ): Product!
     updateProductType(id: Int!, name: String!): ProductType!
     updateProductBrand(id: ID!, name: String!, description: String, img: Upload): ProductBrands!
-    updateProductSet(id: ID!, setName: String!, setCode: String!, description: String): ProductSets!
     updateVariant(id: Int!, name: String!): ProductVariant!
     updateRarity(id: Int!, name: String!): Rarity!
     updateCardType(id: Int!, name: String!, brandId: Int!): CardType
     deleteProduct(id: ID!): Message!
     deleteBrand(id: ID!): Message!
-    deleteSet(id: ID!): Message!
     deleteCardType(id: ID!): Message!
 }
 
