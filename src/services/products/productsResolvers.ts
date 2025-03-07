@@ -48,18 +48,18 @@ const productResolvers = {
       }
     },
 
-    getAllProductTypes: async (
-      _: unknown,
-      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
-    ) => {
-      const { types, totalCount, totalPages, currentPage } = await ProductsService.getAllProductTypes( page, limit, search );
-      return {
-        types,
-        totalCount,
-        totalPages,
-        currentPage,
-      };
-    },
+    // getAllProductTypes: async (
+    //   _: unknown,
+    //   { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
+    // ) => {
+    //   const { types, totalCount, totalPages, currentPage } = await ProductsService.getAllProductTypes( page, limit, search );
+    //   return {
+    //     types,
+    //     totalCount,
+    //     totalPages,
+    //     currentPage,
+    //   };
+    // },
 
     getAllCardTypes: async (
       _: unknown,
@@ -73,18 +73,6 @@ const productResolvers = {
         currentPage,
       };
     },
-
-    // getAllBrands: async (
-    //   _: unknown,
-    //   { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string } ) => {
-    //   const { brands, totalCount, totalPages, currentPage } = await ProductsService.getAllBrands( page, limit, search );
-    //   return {
-    //     brands,
-    //     totalCount,
-    //     totalPages,
-    //     currentPage
-    //   }
-    // },
 
     getAllRarity: async (
       _: unknown,
@@ -127,32 +115,23 @@ const productResolvers = {
   },
 
   Mutation: {
-    createProductType: async ( _: any, { input }: { input: { name: string } } ) => {
-      try {
-        const existingType = await prisma.productType.findUnique( {
-          where: { name: input.name },
-        } );
-
-        if ( existingType ) {
-          throw new Error( "Product type already exists." );
-        }
-
-        return await prisma.productType.create( {
-          data: { name: input.name },
-        } );
-
-      } catch ( error ) {
-        console.error( "Error creating product type:", error );
-        throw new Error( "An unexpected error occurred while creating the product type." );
-      }
-    },
-
-    // createProductBrand: async ( _: any, { name, description, img }: any ) => {
+    // createProductType: async ( _: any, { input }: { input: { name: string } } ) => {
     //   try {
-    //     return ProductsService.createProductBrand( name, description, img );
+    //     const existingType = await prisma.productType.findUnique( {
+    //       where: { name: input.name },
+    //     } );
+
+    //     if ( existingType ) {
+    //       throw new Error( "Product type already exists." );
+    //     }
+
+    //     return await prisma.productType.create( {
+    //       data: { name: input.name },
+    //     } );
+
     //   } catch ( error ) {
-    //     console.error( "Error in createProduct resolver:", error );
-    //     throw new Error( "Failed to create product." );
+    //     console.error( "Error creating product type:", error );
+    //     throw new Error( "An unexpected error occurred while creating the product type." );
     //   }
     // },
 
@@ -297,15 +276,6 @@ const productResolvers = {
 
     },
 
-    // async updateProductBrand( _: any, { id, name, description, img }: any ) {
-    //   try {
-    //     return await ProductsService.updateProductBrand( parseInt( id, 10 ), name, description, img );
-    //   } catch ( error ) {
-    //     console.error( "Error in updateProductBrand resolver:", error );
-    //     throw new Error( "Failed to update product brand." );
-    //   }
-    // },
-
     async updateVariant( _: any, { id, name }: any ) {
       try {
         return await ProductsService.updateVariant( parseInt( id, 10 ), name );
@@ -315,14 +285,14 @@ const productResolvers = {
       }
     },
 
-    async updateProductType( _: any, { id, name }: { id: number; name: string } ) {
-      try {
-        return await ProductsService.updateProductType( id, name );
-      } catch ( error ) {
-        console.error( "Error in updateProductType resolver:", error );
-        throw new Error( "Failed to update product type." );
-      }
-    },
+    // async updateProductType( _: any, { id, name }: { id: number; name: string } ) {
+    //   try {
+    //     return await ProductsService.updateProductType( id, name );
+    //   } catch ( error ) {
+    //     console.error( "Error in updateProductType resolver:", error );
+    //     throw new Error( "Failed to update product type." );
+    //   }
+    // },
 
     async updateRarity( _: any, { id, name }: { id: number; name: string } ) {
       try {
@@ -384,26 +354,6 @@ const productResolvers = {
       }
     },
 
-    // deleteBrand: async (
-    //   _: any,
-    //   args: { id: string },
-    //   { user }: any
-    // ): Promise<{ message: string }> => {
-    //   if ( !user ) {
-    //     throw new AuthenticationError( "You must be logged in" );
-    //   }
-
-    //   if ( !isAdminOrOwner( user ) ) {
-    //     throw new AuthenticationError( "Permission denied" );
-    //   }
-
-    //   try {
-    //     return await ProductsService.deleteBrand( args.id );
-    //   } catch ( error ) {
-    //     console.error( "Error in deleteBrand resolver:", error );
-    //     throw new ApolloError( "Failed to delete brand", "DELETE_FAILED" );
-    //   }
-    // },
     deleteCardType: async (
       _: any,
       args: { id: string },
