@@ -4,6 +4,7 @@ import categoryTypeDefs from "../categories/categoriesTypeDefs";
 import carouselTypeDefs from '../carousel/carouselTypedefs';
 import promotionTypeDefs from '../promotions/promotionsTypeDefs';
 import productSetsTypeDefs from '../product-sets/productSetTypeDefs';
+import brandsTypeDefs from '../brands/brandsTypedefs';
 
 const typeDefs = gql`
   type User {
@@ -161,6 +162,6 @@ const typeDefs = gql`
   }
 `;
 
-const combinedTypeDefs = [typeDefs, productTypeDefs, categoryTypeDefs, carouselTypeDefs, promotionTypeDefs, productSetsTypeDefs];
+const combinedTypeDefs = [typeDefs, productTypeDefs, categoryTypeDefs, carouselTypeDefs, promotionTypeDefs, productSetsTypeDefs, brandsTypeDefs];
 
 export default combinedTypeDefs;

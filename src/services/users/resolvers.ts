@@ -18,6 +18,7 @@ import userResolvers from "./userResolvers";
 import carouselResolvers from '../carousel/carouselResolvers'
 import promotionResolvers from '../promotions/promotionsResolvers';
 import productSetResolvers from '../product-sets/productSetResolvers';
+import brandsResolvers from '../brands/brandsResolvers';
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -28,6 +29,7 @@ const resolvers = {
     ...carouselResolvers.Query,
     ...promotionResolvers.Query,
     ...productSetResolvers.Query,
+    ...brandsResolvers.Query,
     getVerificationStatus: async ( _: any, { userId }: any ) => {
       const verification = await UserService.getVerificationStatus( userId );
       return verification;
@@ -74,6 +76,7 @@ const resolvers = {
     ...carouselResolvers.Mutation,
     ...promotionResolvers.Mutation,
     ...productSetResolvers.Mutation,
+    ...brandsResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {

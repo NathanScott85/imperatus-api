@@ -48,7 +48,6 @@ const productResolvers = {
       }
     },
 
-
     getAllProductTypes: async (
       _: unknown,
       { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
@@ -75,17 +74,17 @@ const productResolvers = {
       };
     },
 
-    getAllBrands: async (
-      _: unknown,
-      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string } ) => {
-      const { brands, totalCount, totalPages, currentPage } = await ProductsService.getAllBrands( page, limit, search );
-      return {
-        brands,
-        totalCount,
-        totalPages,
-        currentPage
-      }
-    },
+    // getAllBrands: async (
+    //   _: unknown,
+    //   { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string } ) => {
+    //   const { brands, totalCount, totalPages, currentPage } = await ProductsService.getAllBrands( page, limit, search );
+    //   return {
+    //     brands,
+    //     totalCount,
+    //     totalPages,
+    //     currentPage
+    //   }
+    // },
 
     getAllRarity: async (
       _: unknown,
@@ -148,14 +147,14 @@ const productResolvers = {
       }
     },
 
-    createProductBrand: async ( _: any, { name, description, img }: any ) => {
-      try {
-        return ProductsService.createProductBrand( name, description, img );
-      } catch ( error ) {
-        console.error( "Error in createProduct resolver:", error );
-        throw new Error( "Failed to create product." );
-      }
-    },
+    // createProductBrand: async ( _: any, { name, description, img }: any ) => {
+    //   try {
+    //     return ProductsService.createProductBrand( name, description, img );
+    //   } catch ( error ) {
+    //     console.error( "Error in createProduct resolver:", error );
+    //     throw new Error( "Failed to create product." );
+    //   }
+    // },
 
     createRarity: async ( _: any, { name }: { name: string } ) => {
       try {
@@ -298,14 +297,14 @@ const productResolvers = {
 
     },
 
-    async updateProductBrand( _: any, { id, name, description, img }: any ) {
-      try {
-        return await ProductsService.updateProductBrand( parseInt( id, 10 ), name, description, img );
-      } catch ( error ) {
-        console.error( "Error in updateProductBrand resolver:", error );
-        throw new Error( "Failed to update product brand." );
-      }
-    },
+    // async updateProductBrand( _: any, { id, name, description, img }: any ) {
+    //   try {
+    //     return await ProductsService.updateProductBrand( parseInt( id, 10 ), name, description, img );
+    //   } catch ( error ) {
+    //     console.error( "Error in updateProductBrand resolver:", error );
+    //     throw new Error( "Failed to update product brand." );
+    //   }
+    // },
 
     async updateVariant( _: any, { id, name }: any ) {
       try {
@@ -385,26 +384,26 @@ const productResolvers = {
       }
     },
 
-    deleteBrand: async (
-      _: any,
-      args: { id: string },
-      { user }: any
-    ): Promise<{ message: string }> => {
-      if ( !user ) {
-        throw new AuthenticationError( "You must be logged in" );
-      }
+    // deleteBrand: async (
+    //   _: any,
+    //   args: { id: string },
+    //   { user }: any
+    // ): Promise<{ message: string }> => {
+    //   if ( !user ) {
+    //     throw new AuthenticationError( "You must be logged in" );
+    //   }
 
-      if ( !isAdminOrOwner( user ) ) {
-        throw new AuthenticationError( "Permission denied" );
-      }
+    //   if ( !isAdminOrOwner( user ) ) {
+    //     throw new AuthenticationError( "Permission denied" );
+    //   }
 
-      try {
-        return await ProductsService.deleteBrand( args.id );
-      } catch ( error ) {
-        console.error( "Error in deleteBrand resolver:", error );
-        throw new ApolloError( "Failed to delete brand", "DELETE_FAILED" );
-      }
-    },
+    //   try {
+    //     return await ProductsService.deleteBrand( args.id );
+    //   } catch ( error ) {
+    //     console.error( "Error in deleteBrand resolver:", error );
+    //     throw new ApolloError( "Failed to delete brand", "DELETE_FAILED" );
+    //   }
+    // },
     deleteCardType: async (
       _: any,
       args: { id: string },
