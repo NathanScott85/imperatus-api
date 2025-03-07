@@ -61,9 +61,9 @@ type ProductType {
     products: [Product!]
 }
 
-input ProductTypeInput {
-    name: String!
-}
+# input ProductTypeInput {
+#     name: String!
+# }
 
 type Stock {
     id: ID!
@@ -137,8 +137,7 @@ type Query {
       search: String
       filters: ProductFilters
     ): PaginatedProducts!
-    getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
-    # getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
+    # getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
     getAllRarity(page: Int, limit: Int, search: String): PaginatedRarities!
     getAllVariants(page: Int, limit: Int, search: String): PaginatedVariants!
     getAllCardTypes(page: Int, limit: Int, search: String): PaginatedCardTypes!
@@ -158,8 +157,7 @@ input StockInput {
 }
 
 type Mutation {
-   createProductType(input: ProductTypeInput!): ProductType!
-#    createProductBrand(name: String, description: String, img: Upload): ProductBrands
+#    createProductType(input: ProductTypeInput!): ProductType!
    createRarity(name: String!): Rarity 
    createVariant(name: String!): ProductVariant  
    createCardType(name: String!, brandId: Int): CardType
@@ -195,13 +193,11 @@ type Mutation {
         variantId: Int
         rarityIds: [Int]
     ): Product!
-    updateProductType(id: Int!, name: String!): ProductType!
-    # updateProductBrand(id: ID!, name: String!, description: String, img: Upload): ProductBrands!
+    # updateProductType(id: Int!, name: String!): ProductType!
     updateVariant(id: Int!, name: String!): ProductVariant!
     updateRarity(id: Int!, name: String!): Rarity!
     updateCardType(id: Int!, name: String!, brandId: Int!): CardType
     deleteProduct(id: ID!): Message!
-    # deleteBrand(id: ID!): Message!
     deleteCardType(id: ID!): Message!
 }
 
