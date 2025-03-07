@@ -48,19 +48,6 @@ const productResolvers = {
       }
     },
 
-    // getAllProductTypes: async (
-    //   _: unknown,
-    //   { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
-    // ) => {
-    //   const { types, totalCount, totalPages, currentPage } = await ProductsService.getAllProductTypes( page, limit, search );
-    //   return {
-    //     types,
-    //     totalCount,
-    //     totalPages,
-    //     currentPage,
-    //   };
-    // },
-
     getAllCardTypes: async (
       _: unknown,
       { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
@@ -72,18 +59,6 @@ const productResolvers = {
         totalPages,
         currentPage,
       };
-    },
-
-    getAllRarity: async (
-      _: unknown,
-      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string } ) => {
-      const { rarities, totalCount, totalPages, currentPage } = await ProductsService.getAllRarity( page, limit, search );
-      return {
-        rarities,
-        totalCount,
-        totalPages,
-        currentPage
-      }
     },
 
     getAllVariants: async (
@@ -115,35 +90,6 @@ const productResolvers = {
   },
 
   Mutation: {
-    // createProductType: async ( _: any, { input }: { input: { name: string } } ) => {
-    //   try {
-    //     const existingType = await prisma.productType.findUnique( {
-    //       where: { name: input.name },
-    //     } );
-
-    //     if ( existingType ) {
-    //       throw new Error( "Product type already exists." );
-    //     }
-
-    //     return await prisma.productType.create( {
-    //       data: { name: input.name },
-    //     } );
-
-    //   } catch ( error ) {
-    //     console.error( "Error creating product type:", error );
-    //     throw new Error( "An unexpected error occurred while creating the product type." );
-    //   }
-    // },
-
-    createRarity: async ( _: any, { name }: { name: string } ) => {
-      try {
-        return ProductsService.createRarity( name );
-      } catch ( error ) {
-        console.error( "Error in createRarity resolver:", error );
-        throw new Error( "Failed to create rarity" );
-      }
-    },
-
     createVariant: async ( _: any, { name }: { name: string } ) => {
       try {
         return ProductsService.createVariant( name );
@@ -285,24 +231,6 @@ const productResolvers = {
       }
     },
 
-    // async updateProductType( _: any, { id, name }: { id: number; name: string } ) {
-    //   try {
-    //     return await ProductsService.updateProductType( id, name );
-    //   } catch ( error ) {
-    //     console.error( "Error in updateProductType resolver:", error );
-    //     throw new Error( "Failed to update product type." );
-    //   }
-    // },
-
-    async updateRarity( _: any, { id, name }: { id: number; name: string } ) {
-      try {
-        return await ProductsService.updateRarity( id, name );
-      } catch ( error ) {
-        console.error( "Error in updateRarity resolver:", error );
-        throw new Error( "Failed to update rarity." );
-      }
-    },
-
     updateCardType: async (
       _: any,
       { id, name, brandId }: { id: number; name: string; brandId: number },
@@ -317,8 +245,6 @@ const productResolvers = {
       }
 
       try {
-        console.log( "Received ID in resolver:", typeof id, id );
-        console.log( "Received brandId in resolver:", typeof brandId, brandId );
         const result = await ProductsService.updateCardType( id, name, Number( brandId ) );
 
         if ( !result ) {
@@ -361,7 +287,7 @@ const productResolvers = {
     ): Promise<{ message: string }> => {
 
       if ( !user ) {
-        console.log( "No user found in context. Throwing AuthenticationError." );
+        console.error( "No user found in context. Throwing AuthenticationError." );
         throw new AuthenticationError( "You must be logged in" );
       }
 

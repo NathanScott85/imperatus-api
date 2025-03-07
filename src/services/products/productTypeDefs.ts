@@ -34,11 +34,6 @@ input ProductFilters {
     stockMax: Int
   }
 
-type Rarity {
-    id: ID!
-    name: String!
-}
-
 type ProductVariant {
     id: ID!
     name: String!
@@ -60,10 +55,6 @@ type ProductType {
     name: String!
     products: [Product!]
 }
-
-# input ProductTypeInput {
-#     name: String!
-# }
 
 type Stock {
     id: ID!
@@ -88,13 +79,6 @@ type ProductBrands {
     img: File
 }
 
-type PaginatedBrands {
-    brands: [ProductBrands!]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int!
-}
-
 type PaginatedRarities {
     rarities: [Rarity!]!
     totalCount: Int!
@@ -107,13 +91,6 @@ type PaginatedVariants {
     totalCount: Int!
     totalPages: Int!
     currentPage: Int!
-}
-
-type PaginatedTypes { 
-    types: [ProductType]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int! 
 }
 
 type CardType {
@@ -137,8 +114,6 @@ type Query {
       search: String
       filters: ProductFilters
     ): PaginatedProducts!
-    # getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
-    getAllRarity(page: Int, limit: Int, search: String): PaginatedRarities!
     getAllVariants(page: Int, limit: Int, search: String): PaginatedVariants!
     getAllCardTypes(page: Int, limit: Int, search: String): PaginatedCardTypes!
     getProductById(id: ID!): Product
@@ -157,8 +132,6 @@ input StockInput {
 }
 
 type Mutation {
-#    createProductType(input: ProductTypeInput!): ProductType!
-   createRarity(name: String!): Rarity 
    createVariant(name: String!): ProductVariant  
    createCardType(name: String!, brandId: Int): CardType
    createProduct(
@@ -193,9 +166,7 @@ type Mutation {
         variantId: Int
         rarityIds: [Int]
     ): Product!
-    # updateProductType(id: Int!, name: String!): ProductType!
     updateVariant(id: Int!, name: String!): ProductVariant!
-    updateRarity(id: Int!, name: String!): Rarity!
     updateCardType(id: Int!, name: String!, brandId: Int!): CardType
     deleteProduct(id: ID!): Message!
     deleteCardType(id: ID!): Message!
