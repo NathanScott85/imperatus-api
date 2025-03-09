@@ -69,13 +69,7 @@ class ProductTypesService {
       throw new Error( "Failed to update product type" );
     }
   }
-  public async deleteProductType( id: number, user: any ) {
-    if ( !user ) {
-      throw new AuthenticationError( "You must be logged in" );
-    }
-    if ( !isAdminOrOwner( user ) ) {
-      throw new AuthenticationError( "Permission denied" );
-    }
+  public async deleteProductType( id: number ) {
     try {
       const existingType = await prisma.productType.findUnique( { where: { id } } );
       if ( !existingType ) throw new Error( "Product type not found." );
@@ -87,7 +81,6 @@ class ProductTypesService {
       throw new Error( "Failed to delete product type" );
     }
   }
-
 }
 
 export default new ProductTypesService();

@@ -1,6 +1,5 @@
 import { ApolloError, AuthenticationError } from 'apollo-server';
 import ProductTypesService from './';
-import { isAdminOrOwner } from '../roles/role-checks';
 
 const productTypesResolvers = {
   Query: {
@@ -37,9 +36,7 @@ const productTypesResolvers = {
       }
     },
 
-    deleteProductType: async ( _: any, { id }: { id: number }, { user }: any ) => {
-      if ( !user ) throw new AuthenticationError( "You must be logged in" );
-      if ( !isAdminOrOwner( user ) ) throw new AuthenticationError( "Permission denied" );
+    deleteProductType: async ( _: any, { id }: { id: number } ) => {
       try {
         return await ProductTypesService.deleteProductType( id );
       } catch ( error ) {
