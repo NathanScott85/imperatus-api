@@ -21,6 +21,7 @@ import productSetResolvers from '../product-sets/productSetResolvers';
 import brandsResolvers from '../brands/brandsResolvers';
 import productTypesResolvers from '../product-type/productTypeResolvers';
 import rarityResolvers from '../card-rarity/cardRarityResolvers';
+import roleResolvers from '../roles/rolesResolvers';
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -34,6 +35,7 @@ const resolvers = {
     ...brandsResolvers.Query,
     ...productTypesResolvers.Query,
     ...rarityResolvers.Query,
+    ...roleResolvers.Query,
     getVerificationStatus: async ( _: any, { userId }: any ) => {
       const verification = await UserService.getVerificationStatus( userId );
       return verification;
@@ -83,6 +85,7 @@ const resolvers = {
     ...brandsResolvers.Mutation,
     ...productTypesResolvers.Mutation,
     ...rarityResolvers.Mutation,
+    ...roleResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {
@@ -280,42 +283,6 @@ const resolvers = {
       return await AuthorizationTokenService.refreshToken( refreshToken );
     },
 
-    createRole: async ( _: unknown, args: { name: string }, { user }: any ) => {
-      if ( !user || !isOwner( user ) )
-        throw new AuthenticationError( "Permission denied" );
-      return await RoleService.createRole( args.name );
-    },
-
-    deleteRole: async ( _: unknown, args: { name: string }, { user }: any ) => {
-      if ( !user || !isOwner( user ) )
-        throw new AuthenticationError( "Permission denied" );
-      await RoleService.deleteRole( args.name );
-      return { message: "Role deleted successfully" };
-    },
-
-    updateUserRoles: async (
-      _: unknown,
-      args: { userId: number; roles: string[] },
-      { user }: any
-    ) => {
-      if ( !user || !isOwner( user ) )
-        throw new AuthenticationError(
-          "You do not have permission to update roles"
-        );
-      return await UserService.updateUserRoles( args.userId, args.roles );
-    },
-
-    assignRoleToUser: async (
-      _: unknown,
-      { userId, roleName }: { userId: number; roleName: string },
-      { user }: any
-    ) => {
-      if ( !user || !isOwner( user ) ) {
-        throw new AuthenticationError( "Permission denied" );
-      }
-      return await RoleService.assignRoleToUser( userId, roleName );
-    },
-
     updateUserStoreCredit: async (
       _: any,
       { id, amount }: { id: number; amount: number },
@@ -327,7 +294,6 @@ const resolvers = {
         );
       }
 
-      // Get current user
       const existingUser = await prisma.user.findUnique( {
         where: { id },
       } );
@@ -336,7 +302,6 @@ const resolvers = {
         throw new Error( "User not found." );
       }
 
-      // Calculate the new balance
       const newBalance = amount;
 
       // Log the transaction
