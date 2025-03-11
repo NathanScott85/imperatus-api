@@ -4,6 +4,7 @@ import CarouselService from ".";
 export interface CreateCarouselPageProps {
   title: string;
   description?: string | undefined;
+  buttonText: string | undefined;
   img: Promise<{
     createReadStream: () => any;
     filename: string;
@@ -19,6 +20,7 @@ export interface UpdateCarouselPageProps {
   id: string;
   title?: string;
   description?: string;
+  buttonText?: string
   img?: Promise<{
     createReadStream: () => any;
     filename: string;
@@ -58,7 +60,7 @@ const carouselResolvers = {
   Mutation: {
     createCarouselPage: async (
       _: any,
-      { title, description, img, brandId, productId, disabled }: CreateCarouselPageProps
+      { title, description, img, buttonText, brandId, productId, disabled }: CreateCarouselPageProps
     ) => {
       try {
         const numericBrandId = brandId ? Number( brandId ) : undefined;
@@ -68,6 +70,7 @@ const carouselResolvers = {
           title,
           description,
           img,
+          buttonText,
           numericBrandId,
           numericProductId,
           disabled
@@ -80,7 +83,7 @@ const carouselResolvers = {
 
     updateCarouselPage: async (
       _: any,
-      { id, title, description, img, brandId, productId, disabled }: UpdateCarouselPageProps
+      { id, title, description, img, buttonText, brandId, productId, disabled }: UpdateCarouselPageProps
     ) => {
       try {
         const numericBrandId = brandId ? Number( brandId ) : undefined;
@@ -90,6 +93,7 @@ const carouselResolvers = {
           id,
           title,
           description,
+          buttonText,
           img,
           numericBrandId,
           numericProductId,
