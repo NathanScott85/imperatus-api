@@ -33,6 +33,7 @@ model CarouselPage {
   id           String         @id @default(cuid())
   title        String
   description  String?
+  buttonText   String?
   img          File?          @relation("CarouselImage", fields: [imgId], references: [id])
   imgId        Int?           @unique
   carouselPageId String?

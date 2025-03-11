@@ -22,6 +22,7 @@ type CarouselPage {
   id: ID!
   title: String!
   description: String
+  buttonText: String
   img: File
   disabled: Boolean
   brand: ProductBrands
@@ -52,11 +53,20 @@ type Query {
 }
 
 type Mutation {
-  createCarouselPage(title: String!, description: String, img: Upload! brandId: ID, productId: ID, disabled: Boolean): CarouselPage!
+  createCarouselPage(
+    title: String!
+    description: String
+    buttonText: String
+    img: Upload
+    brandId: ID
+    productId: ID
+    disabled: Boolean
+  ): CarouselPage!
   updateCarouselPage(
     id: ID!
     title: String
     description: String
+    buttonText: String
     img: Upload
     brandId: ID
     productId: ID
