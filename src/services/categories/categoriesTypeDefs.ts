@@ -23,6 +23,7 @@ const categoryTypeDefs = gql`
   type Category {
       id: ID!
       name: String!
+      slug: String
       description: String
       img: File
       type: CategoryType

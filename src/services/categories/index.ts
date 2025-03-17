@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { ApolloError } from "apollo-server";
 import UploadService from "../upload";
 import { prisma } from "../../server";
+import { formatSlug } from "../../lib";
 
 
 class CategoriesService {
@@ -138,6 +139,7 @@ class CategoriesService {
               set: true,
               variant: true,
               rarities: true,
+              category: true
             },
           },
         },
@@ -209,7 +211,6 @@ class CategoriesService {
     };
   }
 
-
   public async getCategoryByName( name: string ) {
     return await prisma.category.findUnique( {
       where: { name },
@@ -233,74 +234,70 @@ class CategoriesService {
     try {
 
       if ( !name ) throw new Error( "Category name is required." );
-
+  
       const normalizedName = name.toLowerCase();
       const normalizedType = name.toLowerCase();
-
-      const existingCategory = await prisma.category.findFirst( {
-        where: { name: normalizedName },
-      } );
-
+  
+      const existingCategory = await prisma.category.findFirst({
+        where: { name: { equals: normalizedName, mode: "insensitive" } },
+      });
+  
       if ( existingCategory ) {
         throw new Error( "A category with this name already exists. Please choose a different name." );
       }
-
-      let categoryType = await prisma.categoryType.findFirst( {
+  
+      let categoryType = await prisma.categoryType.upsert({
         where: { name: normalizedType },
-      } );
-
-      if ( !categoryType ) {
-        categoryType = await prisma.categoryType.create( {
-          data: { name: normalizedType },
-        } );
-      }
-
-      const category = await prisma.category.create( {
+        update: {},
+        create: { name: normalizedType },
+      });
+  
+      const slug = formatSlug(name);
+  
+      const category = await prisma.category.create({
         data: {
           name,
+          slug,
           description,
           categoryTypeId: categoryType.id,
         },
-      } );
-
-      let fileRecord = null;
-      if ( img ) {
+      });
+  
+      if (img) {
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
-
+  
         const { s3Url, key, fileName, contentType } =
-          await UploadService.processUpload( stream, filename, mimetype );
-
-        fileRecord = await prisma.file.create( {
+          await UploadService.processUpload(stream, filename, mimetype);
+  
+        const fileRecord = await prisma.file.create({
           data: {
             url: s3Url,
             key,
             fileName,
             contentType,
           },
-        } );
-
-        await prisma.category.update( {
+        });
+  
+        await prisma.category.update({
           where: { id: category.id },
           data: { imgId: fileRecord.id },
-        } );
+        });
       }
-
-      const fullCategory = await prisma.category.findUnique( {
+  
+      const fullCategory = await prisma.category.findUnique({
         where: { id: category.id },
-        include: { img: true, type: true },
-      } );
-
+        include: { img: true, type: true, },
+      });
+  
       return fullCategory;
-    } catch ( error ) {
-      console.error( "Error while creating category:", error );
+    } catch (error) {
+      console.error("Error while creating category:", error);
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new Error(
-          "A category with this name already exists. Please choose a different name."
-        );
+        throw new Error("A category with this name already exists. Please choose a different name.");
       }
     }
   }
@@ -354,57 +351,61 @@ class CategoriesService {
       let imgKey = null;
       let fileRecord = null;
 
-      if ( img ) {
+      if (img) {
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
 
-        fileRecord = await prisma.file.findUnique( {
+        fileRecord = await prisma.file.findUnique({
           where: { fileName: filename },
-        } );
+        });
 
-        if ( !fileRecord ) {
+        if (!fileRecord) {
           const { s3Url, key, fileName, contentType } =
-            await UploadService.processUpload( stream, filename, mimetype );
+            await UploadService.processUpload(stream, filename, mimetype);
 
           imgURL = s3Url;
           imgKey = key;
 
-          fileRecord = await prisma.file.create( {
+          fileRecord = await prisma.file.create({
             data: {
               url: s3Url,
               key,
               fileName,
               contentType,
             },
-          } );
+          });
         }
       }
 
-      const existingCategory = await prisma.category.findUnique( {
-        where: { id: parseInt( id ) },
-      } );
+      const existingCategory = await prisma.category.findUnique({
+        where: { id: parseInt(id) },
+      });
 
-      if ( !existingCategory ) {
-        throw new ApolloError( "Category not found", "CATEGORY_NOT_FOUND" );
+      if (!existingCategory) {
+        throw new ApolloError("Category not found", "CATEGORY_NOT_FOUND");
       }
 
-      await prisma.category.update( {
-        where: { id: parseInt( id ) },
+      const updatedName = name ? name : existingCategory.name;
+      const updatedSlug = name ? formatSlug(name) : existingCategory.slug;
+
+      await prisma.category.update({
+        where: { id: parseInt(id) },
         data: {
-          name: name ? name : existingCategory.name,
+          name: updatedName,
+          slug: updatedSlug,
           description: description ? description : existingCategory.description,
           imgId: fileRecord?.id ?? existingCategory.imgId,
         },
-      } );
+      });
 
-      const categoryWithImg = await prisma.category.findUnique( {
-        where: { id: parseInt( id ) },
+      const categoryWithImg = await prisma.category.findUnique({
+        where: { id: parseInt(id) },
         include: { img: true },
-      } );
+      });
 
       return categoryWithImg;
-    } catch ( error ) {
-      console.error( "Error in updateCategory method:", error );
+    } catch (error) {
+      console.error("Error in updateCategory method:", error);
 
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -420,6 +421,7 @@ class CategoriesService {
       );
     }
   }
+
 }
 
 export default new CategoriesService();
