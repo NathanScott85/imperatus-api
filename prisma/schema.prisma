@@ -69,6 +69,7 @@ model CategoryType {
 model Category {
   id             Int          @id @default(autoincrement())
   name           String       @unique
+  slug           String?       @unique
   description    String
   imgId          Int?         @unique
   categoryTypeId Int          @default(autoincrement())

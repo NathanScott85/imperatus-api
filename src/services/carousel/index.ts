@@ -15,7 +15,13 @@ class CarouselService {
               include: {
                 img: true,
                 brand: { include: { img: true } },
-                product: true
+                product: {
+                  include: {
+                    category: true,
+                    img: true,
+                    brand: true,
+                  }
+                }
               },
               where: search ? {
                 OR: [
@@ -235,7 +241,6 @@ class CarouselService {
       );
     }
   }
-
 
   public async deleteCarouselPage(id: string): Promise<any> {
     try {

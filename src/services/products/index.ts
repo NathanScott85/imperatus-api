@@ -345,7 +345,7 @@ class ProductsService {
         },
       } );
 
-      const slug = `${formatSlug( existingCategory.name )}/${product.id}/${formatSlug( name )}`;
+      const slug = `${formatSlug( name )}`;
 
       const updatedProduct = await prisma.product.update( {
         where: { id: product.id },
@@ -474,7 +474,7 @@ class ProductsService {
           throw new Error( `Invalid category for slug update.` );
         }
 
-        updatedSlug = `${formatSlug( updatedCategory.name )}/${id}/${formatSlug(
+        updatedSlug = `${formatSlug(
           name || existingProduct.name
         )}`;
       }

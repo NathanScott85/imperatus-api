@@ -25,7 +25,6 @@ const roleResolvers = {
     getUserRoles: async ( _: unknown, { userId }: { userId: number }, { user }: any ) => {
       if ( !user || !isOwner( user ) )
         throw new AuthenticationError( "Permission denied" );
-      console.log( userId, 'userId' );
       return await RoleService.getUserRoles( userId );
     },
 
