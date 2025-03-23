@@ -32,12 +32,8 @@ input ProductFilters {
     preorder: Boolean
     stockMin: Int
     stockMax: Int
-  }
-
-type ProductVariant {
-    id: ID!
-    name: String!
 }
+
 
 scalar Upload
 
@@ -86,12 +82,6 @@ type PaginatedRarities {
     currentPage: Int!
 }
 
-type PaginatedVariants {
-    variants: [ProductVariant!]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int!
-}
 
 type CardType {
     id: ID!
@@ -114,7 +104,6 @@ type Query {
       search: String
       filters: ProductFilters
     ): PaginatedProducts!
-    getAllVariants(page: Int, limit: Int, search: String): PaginatedVariants!
     getAllCardTypes(page: Int, limit: Int, search: String): PaginatedCardTypes!
     getProductById(id: ID!): Product
 }
@@ -132,7 +121,6 @@ input StockInput {
 }
 
 type Mutation {
-   createVariant(name: String!): ProductVariant  
    createCardType(name: String!, brandId: Int): CardType
    createProduct(
         name: String!
@@ -166,7 +154,6 @@ type Mutation {
         variantId: Int
         rarityIds: [Int]
     ): Product!
-    updateVariant(id: Int!, name: String!): ProductVariant!
     updateCardType(id: Int!, name: String!, brandId: Int!): CardType
     deleteProduct(id: ID!): Message!
     deleteCardType(id: ID!): Message!
