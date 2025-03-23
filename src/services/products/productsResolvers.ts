@@ -60,25 +60,7 @@ const productResolvers = {
         currentPage,
       };
     },
-
-    getAllVariants: async (
-      _: unknown,
-      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string }
-    ) => {
-      try {
-        const { variants, totalCount, totalPages, currentPage } = await ProductsService.getAllProductVariants( page, limit, search );
-        return {
-          variants,
-          totalCount,
-          totalPages,
-          currentPage,
-        };
-      } catch ( error ) {
-        console.error( "Error retrieving product variants:", error );
-        throw new Error( "Failed to retrieve product variants" );
-      }
-    },
-
+  
     getProductById: async ( _: any, args: { id: string } ) => {
       try {
         return await ProductsService.getProductById( parseInt( args.id ) );
@@ -90,15 +72,6 @@ const productResolvers = {
   },
 
   Mutation: {
-    createVariant: async ( _: any, { name }: { name: string } ) => {
-      try {
-        return ProductsService.createVariant( name );
-      } catch ( error ) {
-        console.error( "Error in create variant resolver:", error );
-        throw new Error( "Failed to create variant" );
-      }
-    },
-
     createCardType: async ( _: any, { name, brandId }: { name: string, brandId: number } ) => {
       try {
         return ProductsService.createCardType( name, brandId );
@@ -220,15 +193,6 @@ const productResolvers = {
         throw new ApolloError( "Failed to update product", "UPDATE_FAILED" );
       }
 
-    },
-
-    async updateVariant( _: any, { id, name }: any ) {
-      try {
-        return await ProductsService.updateVariant( parseInt( id, 10 ), name );
-      } catch ( error ) {
-        console.error( "Error in updateVariant resolver:", error );
-        throw new Error( "Failed to update variant." );
-      }
     },
 
     updateCardType: async (
