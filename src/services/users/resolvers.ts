@@ -23,6 +23,7 @@ import productTypesResolvers from '../product-type/productTypeResolvers';
 import rarityResolvers from '../card-rarity/cardRarityResolvers';
 import roleResolvers from '../roles/rolesResolvers';
 import variantResolvers from "../variants/variantsResolvers";
+import cardTypeResolvers from "../card-types/cardTypeResolvers";
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -38,6 +39,7 @@ const resolvers = {
     ...rarityResolvers.Query,
     ...roleResolvers.Query,
     ...variantResolvers.Query,
+    ...cardTypeResolvers.Query,
     getVerificationStatus: async ( _: any, { userId }: any ) => {
       const verification = await UserService.getVerificationStatus( userId );
       return verification;
@@ -89,6 +91,7 @@ const resolvers = {
     ...rarityResolvers.Mutation,
     ...roleResolvers.Mutation,
     ...variantResolvers.Mutation,
+    ...cardTypeResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {

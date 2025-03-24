@@ -46,21 +46,7 @@ const productResolvers = {
         console.error( "Error in getAllProducts resolver:", error );
         throw new Error( "Failed to retrieve products" );
       }
-    },
-
-    getAllCardTypes: async (
-      _: unknown,
-      { page = 1, limit = 10, search = "" }: { page: number; limit: number; search?: string },
-    ) => {
-      const { cardTypes, totalCount, totalPages, currentPage } = await ProductsService.getAllCardTypes( page, limit, search );
-      return {
-        cardTypes,
-        totalCount,
-        totalPages,
-        currentPage,
-      };
-    },
-  
+    },  
     getProductById: async ( _: any, args: { id: string } ) => {
       try {
         return await ProductsService.getProductById( parseInt( args.id ) );
@@ -72,15 +58,6 @@ const productResolvers = {
   },
 
   Mutation: {
-    createCardType: async ( _: any, { name, brandId }: { name: string, brandId: number } ) => {
-      try {
-        return ProductsService.createCardType( name, brandId );
-      } catch ( error ) {
-        console.error( "Error in create card type resolver:", error );
-        throw new Error( "Failed to create card type" );
-      }
-    },
-
     createProduct: async ( _: any, args: any ) => {
       const {
         name,
@@ -194,34 +171,32 @@ const productResolvers = {
       }
 
     },
+    //   _: any,
+    //   { id, name, brandId }: { id: number; name: string; brandId: number },
+    //   { user }: any
+    // ) => {
+    //   if ( !user ) {
+    //     throw new AuthenticationError( "You must be logged in" );
+    //   }
 
-    updateCardType: async (
-      _: any,
-      { id, name, brandId }: { id: number; name: string; brandId: number },
-      { user }: any
-    ) => {
-      if ( !user ) {
-        throw new AuthenticationError( "You must be logged in" );
-      }
+    //   if ( !isAdminOrOwner( user ) ) {
+    //     throw new AuthenticationError( "Permission denied" );
+    //   }
 
-      if ( !isAdminOrOwner( user ) ) {
-        throw new AuthenticationError( "Permission denied" );
-      }
+    //   try {
+    //     const result = await ProductsService.updateCardType( id, name, Number( brandId ) );
 
-      try {
-        const result = await ProductsService.updateCardType( id, name, Number( brandId ) );
+    //     if ( !result ) {
+    //       console.error( "Result is null or undefined, throwing ApolloError." );
+    //       throw new ApolloError( "Failed to update card type - no result returned" );
+    //     }
 
-        if ( !result ) {
-          console.error( "Result is null or undefined, throwing ApolloError." );
-          throw new ApolloError( "Failed to update card type - no result returned" );
-        }
-
-        return result;
-      } catch ( error ) {
-        console.error( "Error caught in updateCardType resolver:", error );
-        throw new ApolloError( "Failed to update card type", "UPDATE_FAILED" );
-      }
-    },
+    //     return result;
+    //   } catch ( error ) {
+    //     console.error( "Error caught in updateCardType resolver:", error );
+    //     throw new ApolloError( "Failed to update card type", "UPDATE_FAILED" );
+    //   }
+    // },
 
     deleteProduct: async (
       _: any,
@@ -243,36 +218,6 @@ const productResolvers = {
         throw new ApolloError( "Failed to delete product", "DELETE_FAILED" );
       }
     },
-
-    deleteCardType: async (
-      _: any,
-      args: { id: string },
-      { user }: any
-    ): Promise<{ message: string }> => {
-
-      if ( !user ) {
-        console.error( "No user found in context. Throwing AuthenticationError." );
-        throw new AuthenticationError( "You must be logged in" );
-      }
-
-      if ( !isAdminOrOwner( user ) ) {
-        throw new AuthenticationError( "Permission denied" );
-      }
-
-      try {
-        const result = await ProductsService.deleteCardType( args.id );
-
-        if ( !result ) {
-          console.error( "Result is null or undefined, throwing ApolloError." );
-          throw new ApolloError( "Failed to delete card type - no result returned" );
-        }
-
-        return result;
-      } catch ( error ) {
-        console.error( "Error caught in deleteCardType resolver:", error );
-        throw new ApolloError( "Failed to delete card type", "DELETE_FAILED" );
-      }
-    }
   },
 };
 

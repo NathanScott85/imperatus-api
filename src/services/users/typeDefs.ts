@@ -9,6 +9,8 @@ import productTypesTypeDefs from '../product-type/productTypeTypeDefs';
 import rarityTypeDefs from '../card-rarity/cardRarityTypeDefs';
 import roleTypeDefs from '../roles/roleTypeDefs';
 import variantTypeDefs from '../variants/variantsTypedefs';
+import cardTypeResolvers from '../card-types/cardTypeResolvers';
+import cardTypeDefs from '../card-types/cardTypeTypeDefs';
 
 const typeDefs = gql`
     type User {
@@ -160,7 +162,8 @@ const combinedTypeDefs = [
     productTypesTypeDefs,
     rarityTypeDefs,
     roleTypeDefs,
-    variantTypeDefs
+    variantTypeDefs,
+    cardTypeDefs
 ];
 
 export default combinedTypeDefs;

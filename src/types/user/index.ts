@@ -1,5 +1,3 @@
-// user types
-
 export interface DeleteUserResponse {
   message: string;
 }
