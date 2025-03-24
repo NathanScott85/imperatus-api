@@ -151,6 +151,41 @@ class ProductsService {
     }
   }
 
+  public async getLatestProducts(): Promise<any[]> {
+    try {
+        const products = await prisma.product.findMany({
+            orderBy: {
+                createdAt: 'desc',
+            },
+            take: 6,
+            include: {
+                category: {
+                    include: {
+                        img: true,
+                    },
+                },
+                stock: true,
+                img: true,
+                type: true,
+                rarities: true,
+                variant: true,
+                set: true,
+                cardType: true,
+                brand: {
+                    include: {
+                        img: true,
+                    },
+                },
+            },
+        });
+
+        return products;
+    } catch (error) {
+        console.error("Error in getLatestProducts:", error);
+        throw new Error("Failed to retrieve latest products");
+    }
+}
+
 
   public async getProductById( id: number ) {
     try {

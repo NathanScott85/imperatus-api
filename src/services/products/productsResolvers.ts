@@ -55,6 +55,14 @@ const productResolvers = {
         throw new ApolloError( "Failed to retrieve product" );
       }
     },
+    getLatestProducts: async () => {
+      try {
+          return await ProductsService.getLatestProducts();
+      } catch (error) {
+          console.error("Error in getLatestProducts resolver:", error);
+          throw new ApolloError("Failed to retrieve latest products");
+      }
+    },  
   },
 
   Mutation: {

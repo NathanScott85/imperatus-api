@@ -89,6 +89,7 @@ type Query {
       filters: ProductFilters
     ): PaginatedProducts!
     getProductById(id: ID!): Product
+    getLatestProducts: [Product!]!
 }
 
 type Message {
