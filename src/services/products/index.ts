@@ -140,7 +140,7 @@ class ProductsService {
       ] );
 
       return {
-        variants, // Renamed from `variant` to `variants` for consistency
+        variants,
         totalCount,
         totalPages: Math.ceil( totalCount / limit ),
         currentPage: page,
@@ -151,49 +151,6 @@ class ProductsService {
     }
   }
 
-  public async getAllCardTypes( page: number = 1, limit: number = 10, search: string = "" ) {
-    try {
-      const offset = ( page - 1 ) * limit;
-
-      const [cardTypes, totalCount] = await Promise.all( [
-        prisma.cardType.findMany( {
-          where: search
-            ? {
-              name: {
-                contains: search,
-                mode: "insensitive",
-              },
-            }
-            : undefined,
-          skip: offset,
-          take: limit,
-          include: {
-            brand: true
-          }
-        } ),
-        prisma.productVariant.count( {
-          where: search
-            ? {
-              name: {
-                contains: search,
-                mode: "insensitive",
-              },
-            }
-            : undefined,
-        } ),
-      ] );
-
-      return {
-        cardTypes,
-        totalCount,
-        totalPages: Math.ceil( totalCount / limit ),
-        currentPage: page,
-      };
-    } catch ( error ) {
-      console.error( "Error retrieving product variants:", error );
-      throw new Error( "Failed to retrieve product variants" );
-    }
-  }
 
   public async getProductById( id: number ) {
     try {
@@ -232,30 +189,6 @@ class ProductsService {
     }
   }
 
-  public async createCardType( name: string, brandId: number ) {
-    try {
-      const existingBrand = await prisma.productBrands.findUnique( {
-        where: { id: brandId },
-      } );
-
-      if ( !existingBrand ) {
-        throw new Error( "Invalid brand. Please select a valid brand." );
-      }
-
-      return await prisma.cardType.create( {
-        data: {
-          name,
-          brandId
-        },
-        include: {
-          brand: true
-        }
-      } );
-    } catch ( error ) {
-      console.error( "Error creating card type:", error );
-      throw new Error( "Failed to create card type." );
-    }
-  }
 
   public async createProduct(
     name: string,
@@ -533,58 +466,6 @@ class ProductsService {
     }
   }
 
-  public async updateVariant( id: number, name: string ): Promise<any> {
-    try {
-      const updatedVariant = await prisma.productVariant.update( {
-        where: { id },
-        data: { name },
-      } );
-
-      return updatedVariant;
-    } catch ( error ) {
-      console.error( 'Error in updateVariant method:', error );
-
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        throw new Error( 'Variant not found.' );
-      }
-      throw new Error( 'An unexpected error occurred while updating the variant.' );
-    }
-  }
-
-  public async updateCardType( id: number, name: string, brandId: number ) {
-
-    try {
-      const existingCardType = await prisma.cardType.findUnique( {
-        where: { id: Number( id ) },
-      } );
-
-      if ( !existingCardType ) {
-        throw new Error( "Card type not found." );
-      }
-
-      const existingBrand = await prisma.productBrands.findUnique( {
-        where: { id: Number( brandId ) },
-      } );
-
-      if ( !existingBrand ) {
-        throw new Error( "Invalid brand. Please select a valid brand." );
-      }
-
-      return await prisma.cardType.update( {
-        where: { id },
-        data: {
-          name,
-          brandId,
-        },
-      } );
-    } catch ( error ) {
-      console.error( "Error updating card type:", error );
-      throw new Error( "Failed to update card type." );
-    }
-  }
 
   public async deleteProduct( id: string ) {
     try {
@@ -621,30 +502,6 @@ class ProductsService {
     } catch ( error ) {
       console.error( "Error in deleteProduct method:", error );
       throw new ApolloError( "Failed to delete product", "DELETE_FAILED" );
-    }
-  }
-
-  public async deleteCardType( id: string ): Promise<{ success: boolean; message: string }> {
-    try {
-      const existingCardType = await prisma.cardType.findUnique( {
-        where: { id: parseInt( id ) },
-      } );
-
-      if ( !existingCardType ) {
-        throw new Error( "Card type not found." );
-      }
-
-      await prisma.cardType.delete( {
-        where: { id: parseInt( id ) },
-      } );
-
-      return {
-        success: true,
-        message: "Card type deleted successfully.",
-      };
-    } catch ( error ) {
-      console.error( "Error in deleteCardType method:", error );
-      throw new Error( "An unexpected error occurred while deleting the card type." );
     }
   }
 }

@@ -34,7 +34,6 @@ input ProductFilters {
     stockMax: Int
 }
 
-
 scalar Upload
 
 type File {
@@ -82,21 +81,6 @@ type PaginatedRarities {
     currentPage: Int!
 }
 
-
-type CardType {
-    id: ID!
-    name: String!
-    brandId: ID!
-    brand: ProductBrands!
-}
-
-type PaginatedCardTypes { 
-    cardTypes: [CardType]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int! 
-}
-
 type Query {
     getAllProducts(
       page: Int
@@ -104,7 +88,6 @@ type Query {
       search: String
       filters: ProductFilters
     ): PaginatedProducts!
-    getAllCardTypes(page: Int, limit: Int, search: String): PaginatedCardTypes!
     getProductById(id: ID!): Product
 }
 
@@ -121,7 +104,6 @@ input StockInput {
 }
 
 type Mutation {
-   createCardType(name: String!, brandId: Int): CardType
    createProduct(
         name: String!
         price: Float!
@@ -154,9 +136,7 @@ type Mutation {
         variantId: Int
         rarityIds: [Int]
     ): Product!
-    updateCardType(id: Int!, name: String!, brandId: Int!): CardType
     deleteProduct(id: ID!): Message!
-    deleteCardType(id: ID!): Message!
 }
 
 `;
