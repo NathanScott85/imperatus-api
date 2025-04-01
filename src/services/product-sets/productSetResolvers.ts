@@ -7,9 +7,11 @@ const productSetResolvers = {
     getAllSets: async ( _: any, { page, limit, search }: any ) => {
       return await ProductSetsService.getAllProductSets( page, limit, search );
     },
+    getSetsByCategory: async (_: any, args: { categoryId: number }) => {
+      return ProductSetsService.getSetsByCategory(args.categoryId);
+    },
   },
   Mutation: {
-
     createProductSet: async ( _: any, { setName, setCode, description, brandId }: any ) => {
       try {
         if ( !brandId ) {

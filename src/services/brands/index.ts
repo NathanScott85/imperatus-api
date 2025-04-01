@@ -46,6 +46,22 @@ class BrandsService {
       throw new Error( "Unable to fetch brands" );
     }
   }
+  public async getBrandsByCategory(categoryId: number) {
+    const products = await prisma.product.findMany({
+        where: { categoryId },
+        include: { brand: true },
+    });
+
+    const brandMap = new Map<number, any>();
+
+    for (const product of products) {
+        if (product.brand) {
+            brandMap.set(product.brand.id, product.brand);
+        }
+    }
+
+    return Array.from(brandMap.values());
+}
 
   public async createProductBrand( name: string, description: string, img: any ): Promise<any> {
     try {

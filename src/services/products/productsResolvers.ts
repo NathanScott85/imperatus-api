@@ -81,6 +81,7 @@ const productResolvers = {
         variantId,
         cardTypeId,
         setId,
+        rarityId,
       } = args;
       try {
         const newProduct = await ProductsService.createProduct(
@@ -97,6 +98,7 @@ const productResolvers = {
           variantId,
           cardTypeId,
           setId,
+          rarityId,
         );
 
         return newProduct;

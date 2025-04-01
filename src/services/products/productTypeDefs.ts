@@ -15,7 +15,7 @@ type Product {
     slug: String
     brand: ProductBrands!
     preorder: Boolean!
-    rarities: [Rarity!]!
+    rarity: Rarity
     variant: ProductVariant
     cardType: CardType
   }
@@ -24,7 +24,7 @@ input ProductFilters {
     brandId: Int
     setId: Int
     variantId: Int
-    rarityIds: [Int]
+    rarityId: [Int]
     cardTypeId: Int
     productTypeId: Int
     priceMin: Float
@@ -74,13 +74,6 @@ type ProductBrands {
     img: File
 }
 
-type PaginatedRarities {
-    rarities: [Rarity!]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int!
-}
-
 type Query {
     getAllProducts(
       page: Int
@@ -106,19 +99,21 @@ input StockInput {
 
 type Mutation {
    createProduct(
-        name: String!
-        price: Float!
-        productTypeId: Int
-        brandId: Int
-        setId: Int
-        description: String
-        img: Upload
-        categoryId: Int
-        cardTypeId: Int
-        stock: StockInput
-        preorder: Boolean!
-        rrp: Float
-    ): Product
+    name: String!
+    price: Float!
+    productTypeId: Int!
+    cardTypeId: Int
+    brandId: Int!
+    setId: Int
+    description: String
+    img: Upload
+    categoryId: Int!
+    stock: StockInput!
+    preorder: Boolean!
+    rrp: Float
+    variantId: Int
+    rarityId: Int
+  ): Product!
     updateProduct(
         id: ID!
         name: String

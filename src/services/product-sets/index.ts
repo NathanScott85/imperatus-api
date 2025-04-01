@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "../../server";
 import { ApolloError } from 'apollo-server';
 
@@ -45,6 +44,23 @@ class ProductSetsService {
       console.error( "Error retrieving product sets", error );
       throw new Error( `Unable to fetch sets, ${error}` );
     }
+  }
+
+  public async getSetsByCategory(categoryId: number) {
+      const products = await prisma.product.findMany({
+          where: { categoryId },
+          include: { set: true },
+      });
+
+      const setMap = new Map<number, any>();
+
+      for (const product of products) {
+          if (product.set) {
+              setMap.set(product.set.id, product.set);
+          }
+      }
+
+      return Array.from(setMap.values());
   }
 
   public async createProductSet( setName: string, setCode: string, description: string, brandId: number ): Promise<any> {

@@ -14,10 +14,21 @@ const categoryTypeDefs = gql`
     name: String!
   }
 
+  type Rarity {
+    id: ID!
+    name: String!
+  }
+
   type CategoryType {
     id: ID!
     name: String!
     categories: [Category!]
+  }
+
+  type StockStatus {
+    hasInStock: Boolean!
+    hasPreorder: Boolean!
+    hasOutOfStock: Boolean!
   }
 
   type Category {
@@ -27,41 +38,27 @@ const categoryTypeDefs = gql`
       description: String
       img: File
       type: CategoryType
+      brands: [ProductBrands!]!
       products: [Product!]!
+      sets: [ProductSets!]!
+      rarities: [Rarity!]  
+      stockStatus: StockStatus!
       totalCount: Int!
       totalPages: Int!
       currentPage: Int!
   }
 
   input CategoryFilters {
-    brandId: Int
-    variantId: Int
-    # rarityId: Int
-    setId: Int
-    productTypeId: Int
-    preorder: Boolean
-    priceMin: Float
-    priceMax: Float
-    stockMin: Int
-    stockMax: Int
+      brandId: [Int]
+      setId: [Int] 
+      rarityId: [Int]
+      inStockOnly: Boolean
+      outOfStockOnly: Boolean
+      preorderOnly: Boolean
   }
 
-  type Filters {
-    brandId: Int
-    variantId: Int
-    # rarityId: Int
-    setId: Int
-    productTypeId: Int
-    preorder: Boolean
-    priceMin: Float
-    priceMax: Float
-    stockMin: Int
-    stockMax: Int
-  }
-  
   type PaginatedCategories {
     categories: [Category!]!
-    filters: Filters
     totalCount: Int!
     totalPages: Int!
     currentPage: Int!
@@ -69,7 +66,7 @@ const categoryTypeDefs = gql`
 
   type Query {
     getAllCategories(page: Int, limit: Int, search: String, filters: CategoryFilters): PaginatedCategories!
-    getCategoryById(id: ID!, page: Int, limit: Int): Category
+    getCategoryById(id: ID!, page: Int, limit: Int, filters: CategoryFilters): Category
     getCategoryByName(name: String!): Category
     getAllCategoryTypes: [CategoryType!]!
     getCategoryTypeById(id: String!): CategoryType

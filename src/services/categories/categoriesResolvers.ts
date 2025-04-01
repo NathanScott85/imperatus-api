@@ -6,11 +6,6 @@ import { isAdminOrOwner } from "../roles/role-checks";
 
 const categoriesResolvers = {
   Category: {
-    products: async ( parent: any ) => {
-      return await prisma.product.findUnique( {
-        where: { id: parent.categoryId },
-      } );
-    },
     stock: async ( parent: any ) => {
       return await prisma.stock.findUnique( {
         where: { productId: parent.id },
@@ -47,8 +42,8 @@ const categoriesResolvers = {
     getAllCategoryTypes: async () => {
       return await CategoriesService.getAllCategoryTypes();
     },
-    getCategoryById: async ( _: any, { id, page, limit }: any ) => {
-      return await CategoriesService.getCategoryById( id, page, limit );
+    getCategoryById: async (_: any, { id, page, limit, filters }: any) => {
+      return await CategoriesService.getCategoryById(id, page, limit, filters);
     },
     getCategoryTypeById: async ( _: any, args: any ) => {
       return await CategoriesService.getCategoryById( args.id )

@@ -21,7 +21,10 @@ const rarityResolvers = {
         console.error( "Error in getAllRarity resolver:", error );
         throw new Error( "Failed to retrieve rarities" );
       }
-    }
+    },
+    getRaritiesByCategory: async (_: any, args: { categoryId: number }) => {
+      return RarityService.getRaritiesByCategory(args.categoryId);
+  },
   },
 
   Mutation: {
