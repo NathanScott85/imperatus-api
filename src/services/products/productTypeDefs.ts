@@ -21,28 +21,25 @@ type Product {
   }
 
 input ProductFilters {
-    brandId: Int
-    setId: Int
-    variantId: Int
+    brandId: [Int]
+    setId: [Int]
     rarityId: [Int]
-    cardTypeId: Int
-    productTypeId: Int
+    inStockOnly: Boolean
+    outOfStockOnly: Boolean
+    preorderOnly: Boolean
     priceMin: Float
     priceMax: Float
-    preorder: Boolean
-    stockMin: Int
-    stockMax: Int
 }
 
 scalar Upload
 
 type File {
-  id: ID!
-  url: String!
-  key: String!
-  fileName: String!
-  contentType: String!
-  createdAt: String!
+    id: ID!
+    url: String!
+    key: String!
+    fileName: String!
+    contentType: String!
+    createdAt: String!
 }
 
 type ProductType {
@@ -62,6 +59,9 @@ type Stock {
 
 type PaginatedProducts {
     products: [Product!]!
+    brands: [ProductBrands!]!
+    sets: [ProductSets!]!
+    rarities: [Rarity!]!
     totalCount: Int!
     totalPages: Int!
     currentPage: Int!
