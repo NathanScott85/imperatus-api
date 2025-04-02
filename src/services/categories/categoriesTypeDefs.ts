@@ -48,14 +48,16 @@ const categoryTypeDefs = gql`
       currentPage: Int!
   }
 
-  input CategoryFilters {
-      brandId: [Int]
-      setId: [Int] 
-      rarityId: [Int]
-      inStockOnly: Boolean
-      outOfStockOnly: Boolean
-      preorderOnly: Boolean
-  }
+input CategoryFilters {
+    brandId: [Int]
+    setId: [Int] 
+    rarityId: [Int]
+    inStockOnly: Boolean
+    outOfStockOnly: Boolean
+    preorderOnly: Boolean
+    priceMin: Float
+    priceMax: Float
+}
 
   type PaginatedCategories {
     categories: [Category!]!

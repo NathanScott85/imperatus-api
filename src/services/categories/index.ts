@@ -179,27 +179,41 @@ class CategoriesService {
     page: number = 1,
     limit: number = 10,
     filters?: {
-        brandId?: number[];
-        setId?: number[];
-        rarityId?: number[];
-        inStockOnly?: boolean;
-        outOfStockOnly?: boolean;
-        preorderOnly?: boolean;
+      brandId?: number[];
+      setId?: number[];
+      rarityId?: number[];
+      inStockOnly?: boolean;
+      outOfStockOnly?: boolean;
+      preorderOnly?: boolean;
+      priceMin?: number;
+      priceMax?: number;
     }
-) {
+  ) {
     const offset = (page - 1) * limit;
     const categoryId = parseInt(id);
 
     const productWhere: Prisma.ProductWhereInput = {
-        categoryId,
-        ...(filters?.brandId?.length && {
-            brandId: { in: filters.brandId },
-        }),
-        ...(filters?.setId?.length && {
-            setId: { in: filters.setId },
-        }),
-        ...(filters?.rarityId?.length && {
-          rarityId: { in: filters.rarityId },
+      categoryId,
+      ...(filters?.brandId?.length && {
+        brandId: { in: filters.brandId },
+      }),
+      ...(filters?.setId?.length && {
+        setId: { in: filters.setId },
+      }),
+      ...(filters?.rarityId?.length && {
+        rarityId: { in: filters.rarityId },
+      }),
+      ...(filters?.priceMin !== undefined && filters?.priceMax !== undefined && {
+        price: {
+          gte: filters.priceMin,
+          lte: filters.priceMax,
+        },
+      }),
+      ...(filters?.priceMin !== undefined && filters?.priceMax === undefined && {
+        price: { gte: filters.priceMin },
+      }),
+      ...(filters?.priceMax !== undefined && filters?.priceMin === undefined && {
+        price: { lte: filters.priceMax },
       }),
     };
 
@@ -208,107 +222,108 @@ class CategoriesService {
     const preorder = filters?.preorderOnly === true;
 
     if (inStock && outOfStock) {
-        productWhere.OR = [
-            { stock: { is: { amount: { gt: 0 } } } },
-            { stock: { is: { amount: 0 } } },
-        ];
+      productWhere.OR = [
+        { stock: { is: { amount: { gt: 0 } } } },
+        { stock: { is: { amount: 0 } } },
+      ];
     } else if (inStock) {
-        productWhere.stock = {
-            is: { amount: { gt: 0 } },
-        };
+      productWhere.stock = {
+        is: { amount: { gt: 0 } },
+      };
     } else if (outOfStock) {
-        productWhere.stock = {
-            is: { amount: 0 },
-        };
+      productWhere.stock = {
+        is: { amount: 0 },
+      };
     }
 
     if (preorder) {
-        if (productWhere.stock?.is) {
-            productWhere.stock.is.preorder = true;
-        } else if (productWhere.stock) {
-            productWhere.stock.is = { preorder: true };
-        } else {
-            productWhere.stock = {
-                is: { preorder: true },
-            };
-        }
+      if (productWhere.stock?.is) {
+        productWhere.stock.is.preorder = true;
+      } else if (productWhere.stock) {
+        productWhere.stock.is = { preorder: true };
+      } else {
+        productWhere.stock = {
+          is: { preorder: true },
+        };
+      }
     }
 
     const [category, totalCount, brands, sets, rarities, hasInStock, hasPreorder, hasOutOfStock] = await Promise.all([
-        prisma.category.findUnique({
-            where: { id: categoryId },
+      prisma.category.findUnique({
+        where: { id: categoryId },
+        include: {
+          type: true,
+          products: {
+            where: productWhere,
+            skip: offset,
+            take: limit,
             include: {
-                type: true,
-                products: {
-                    where: productWhere,
-                    skip: offset,
-                    take: limit,
-                    include: {
-                        stock: true,
-                        img: true,
-                        brand: true,
-                        set: true,
-                        variant: true,
-                        cardType: true,
-                        rarity: true,
-                        category: {
-                            select: {
-                                id: true,
-                                name: true,
-                                description: true,
-                                slug: true,
-                            },
-                        },
-                    },
+              stock: true,
+              img: true,
+              brand: true,
+              set: true,
+              variant: true,
+              cardType: true,
+              rarity: true,
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  slug: true,
                 },
-                img: true,
+              },
             },
-        }),
-        prisma.product.count({ where: productWhere }),
-        BrandsService.getBrandsByCategory(categoryId),
-        ProductSetsService.getSetsByCategory(categoryId),
-        RarityService.getRaritiesByCategory(categoryId),
-        prisma.product.count({
-            where: {
-                categoryId,
-                stock: { is: { amount: { gt: 0 } } },
-            },
-        }),
-        prisma.product.count({
-            where: {
-                categoryId,
-                stock: { is: { preorder: true } },
-            },
-        }),
-        prisma.product.count({
-            where: {
-                categoryId,
-                stock: { is: { amount: 0 } },
-            },
-        }),
+          },
+          img: true,
+        },
+      }),
+      prisma.product.count({ where: productWhere }),
+      BrandsService.getBrandsByCategory(categoryId),
+      ProductSetsService.getSetsByCategory(categoryId),
+      RarityService.getRaritiesByCategory(categoryId),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { amount: { gt: 0 } } },
+        },
+      }),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { preorder: true } },
+        },
+      }),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { amount: 0 } },
+        },
+      }),
     ]);
 
     if (!category || !category.products) {
-        throw new Error(`Category with ID ${id} not found or has no products`);
+      throw new Error(`Category with ID ${id} not found or has no products`);
     }
 
     const stockStatus = {
-        hasInStock: hasInStock > 0,
-        hasPreorder: hasPreorder > 0,
-        hasOutOfStock: hasOutOfStock > 0,
+      hasInStock: hasInStock > 0,
+      hasPreorder: hasPreorder > 0,
+      hasOutOfStock: hasOutOfStock > 0,
     };
 
     return {
-        ...category,
-        brands,
-        sets,
-        rarities,
-        stockStatus,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        currentPage: page,
+      ...category,
+      brands,
+      sets,
+      rarities,
+      stockStatus,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
     };
   }
+
   public async getCategoryByName(name: string) {
     return await prisma.category.findUnique({
       where: { name },

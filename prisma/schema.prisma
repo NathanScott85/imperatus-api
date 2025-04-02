@@ -171,8 +171,6 @@ model Product {
   @@index([cardTypeId])
 }
 
-
-
 model Stock {
   id        Int     @id @default(autoincrement())
   amount    Int
