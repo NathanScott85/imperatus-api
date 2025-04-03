@@ -84,6 +84,15 @@ class ProductsService {
             }
         }
 
+        const searchOnlyWhere: Prisma.ProductWhereInput | undefined = search
+        ? {
+              OR: [
+                  { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
+                  { description: { contains: search, mode: Prisma.QueryMode.insensitive } },
+              ],
+          }
+        : undefined;
+
         const [products, totalCount, brands, sets, rarities, hasInStock, hasPreorder, hasOutOfStock] =
             await Promise.all([
                 prisma.product.findMany({
@@ -103,9 +112,34 @@ class ProductsService {
                     },
                 }),
                 prisma.product.count({ where: productWhere }),
-                prisma.productBrands.findMany({ include: { img: true } }),
-                prisma.productSet.findMany(),
-                prisma.rarity.findMany(),
+                prisma.productBrands.findMany({
+                    ...(searchOnlyWhere && {
+                        where: {
+                            product: {
+                                some: searchOnlyWhere,
+                            },
+                        },
+                    }),
+                    include: { img: true },
+                }),
+                prisma.productSet.findMany({
+                    ...(searchOnlyWhere && {
+                        where: {
+                            product: {
+                                some: searchOnlyWhere,
+                            },
+                        },
+                    }),
+                }),
+                prisma.rarity.findMany({
+                    ...(searchOnlyWhere && {
+                        where: {
+                            products: {
+                                some: searchOnlyWhere,
+                            },
+                        },
+                    }),
+                }),
                 prisma.product.count({
                     where: {
                         ...productWhere,
@@ -148,6 +182,150 @@ class ProductsService {
         throw new Error("Failed to retrieve products");
     }
 }
+
+// public async getAllProducts(
+//   page: number = 1,
+//   limit: number = 10,
+//   search: string = "",
+//   filters: {
+//       brandId?: number[];
+//       setId?: number[];
+//       rarityId?: number[];
+//       inStockOnly?: boolean;
+//       outOfStockOnly?: boolean;
+//       preorderOnly?: boolean;
+//       priceMin?: number;
+//       priceMax?: number;
+//     } = {}
+//   ) {
+//     try {
+//         const offset = (page - 1) * limit;
+
+//         const productWhere: Prisma.ProductWhereInput = {
+//             ...(search && {
+//                 OR: [
+//                     { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
+//                     { description: { contains: search, mode: Prisma.QueryMode.insensitive } },
+//                 ],
+//             }),
+//             ...(filters.brandId?.length && {
+//                 brandId: { in: filters.brandId },
+//             }),
+//             ...(filters.setId?.length && {
+//                 setId: { in: filters.setId },
+//             }),
+//             ...(filters.rarityId?.length && {
+//                 rarityId: { in: filters.rarityId },
+//             }),
+//             ...(filters.priceMin !== undefined && filters.priceMax !== undefined && {
+//                 price: {
+//                     gte: filters.priceMin,
+//                     lte: filters.priceMax,
+//                 },
+//             }),
+//             ...(filters.priceMin !== undefined && filters.priceMax === undefined && {
+//                 price: { gte: filters.priceMin },
+//             }),
+//             ...(filters.priceMax !== undefined && filters.priceMin === undefined && {
+//                 price: { lte: filters.priceMax },
+//             }),
+//         };
+
+//         const inStock = filters.inStockOnly === true;
+//         const outOfStock = filters.outOfStockOnly === true;
+//         const preorder = filters.preorderOnly === true;
+
+//         if (inStock && outOfStock) {
+//             productWhere.OR = [
+//                 { stock: { is: { amount: { gt: 0 } } } },
+//                 { stock: { is: { amount: 0 } } },
+//             ];
+//         } else if (inStock) {
+//             productWhere.stock = {
+//                 is: { amount: { gt: 0 } },
+//             };
+//         } else if (outOfStock) {
+//             productWhere.stock = {
+//                 is: { amount: 0 },
+//             };
+//         }
+
+//         if (preorder) {
+//             if (productWhere.stock?.is) {
+//                 productWhere.stock.is.preorder = true;
+//             } else if (productWhere.stock) {
+//                 productWhere.stock.is = { preorder: true };
+//             } else {
+//                 productWhere.stock = {
+//                     is: { preorder: true },
+//                 };
+//             }
+//         }
+
+//         const [products, totalCount, brands, sets, rarities, hasInStock, hasPreorder, hasOutOfStock] =
+//             await Promise.all([
+//                 prisma.product.findMany({
+//                     skip: offset,
+//                     take: limit,
+//                     where: productWhere,
+//                     include: {
+//                         category: { include: { img: true } },
+//                         stock: true,
+//                         img: true,
+//                         type: true,
+//                         rarity: true,
+//                         variant: true,
+//                         set: true,
+//                         cardType: true,
+//                         brand: { include: { img: true } },
+//                     },
+//                 }),
+//                 prisma.product.count({ where: productWhere }),
+//                 prisma.productBrands.findMany({ include: { img: true } }),
+//                 prisma.productSet.findMany(),
+//                 prisma.rarity.findMany(),
+//                 prisma.product.count({
+//                     where: {
+//                         ...productWhere,
+//                         stock: { is: { amount: { gt: 0 } } },
+//                     },
+//                 }),
+//                 prisma.product.count({
+//                     where: {
+//                         ...productWhere,
+//                         stock: { is: { preorder: true } },
+//                     },
+//                 }),
+//                 prisma.product.count({
+//                     where: {
+//                         ...productWhere,
+//                         stock: { is: { amount: 0 } },
+//                     },
+//                 }),
+//             ]);
+
+//         const stockStatus = {
+//             hasInStock: hasInStock > 0,
+//             hasPreorder: hasPreorder > 0,
+//             hasOutOfStock: hasOutOfStock > 0,
+//         };
+
+//         return {
+//             filters,
+//             products,
+//             totalCount,
+//             totalPages: Math.ceil(totalCount / limit),
+//             currentPage: page,
+//             brands,
+//             sets,
+//             rarities,
+//             stockStatus,
+//         };
+//     } catch (error) {
+//         console.error("Error in getAllProducts:", error);
+//         throw new Error("Failed to retrieve products");
+//     }
+//   }
 
  
   public async getAllProductVariants(page: number = 1, limit: number = 10, search: string = "") {
