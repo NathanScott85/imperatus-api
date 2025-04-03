@@ -5,48 +5,15 @@ import { isAdminOrOwner } from '../roles/role-checks';
 
 const productResolvers = {
   Query: {
-    getAllProducts: async (
-      _: unknown,
-      {
-        page = 1,
-        limit = 10,
-        search = "",
-        filters = {}
-      }: {
-        page: number;
-        limit: number;
-        search?: string;
-        filters?: {
-          brandId?: number;
-          setId?: number;
-          variantId?: number;
-          rarityIds?: number[];
-          cardTypeId?: number;
-          productTypeId?: number;
-          priceMin?: number;
-          priceMax?: number;
-          preorder?: boolean;
-          stockMin?: number;
-          stockMax?: number;
-        };
-      }
-    ) => {
-      try {
-        const { products, totalCount, totalPages, currentPage } = await ProductsService.getAllProducts(
-          page, limit, search, filters
-        );
-        return {
-          filters,
-          products,
-          totalCount,
-          totalPages,
-          currentPage,
-        };
-      } catch ( error ) {
-        console.error( "Error in getAllProducts resolver:", error );
-        throw new Error( "Failed to retrieve products" );
-      }
-    },  
+    getAllProducts: async (_: any, args: any) => {
+      const {
+          page = 1,
+          limit = 10,
+          search = '',
+          filters
+      } = args;
+      return await ProductsService.getAllProducts(page, limit, search, filters);
+  },
     getProductById: async ( _: any, args: { id: string } ) => {
       try {
         return await ProductsService.getProductById( parseInt( args.id ) );
@@ -81,6 +48,7 @@ const productResolvers = {
         variantId,
         cardTypeId,
         setId,
+        rarityId,
       } = args;
       try {
         const newProduct = await ProductsService.createProduct(
@@ -97,6 +65,7 @@ const productResolvers = {
           variantId,
           cardTypeId,
           setId,
+          rarityId,
         );
 
         return newProduct;

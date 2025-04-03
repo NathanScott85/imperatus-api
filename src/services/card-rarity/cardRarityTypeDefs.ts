@@ -16,6 +16,7 @@ type PaginatedRarities {
 
 type Query {
     getAllRarity(page: Int, limit: Int, search: String): PaginatedRarities!
+    getRaritiesByCategory(categoryId: Int!): [Rarity!]!
 }
 
 type Mutation {

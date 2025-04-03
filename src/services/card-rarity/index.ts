@@ -42,6 +42,28 @@ class RarityService {
     }
   }
 
+  public async getRaritiesByCategory(categoryId: number) {
+    const products = await prisma.product.findMany({
+        where: {
+            categoryId,
+            rarityId: { not: null },
+        },
+        include: {
+            rarity: true,
+        },
+    });
+
+    const rarityMap = new Map<number, any>();
+
+    for (const product of products) {
+        if (product.rarity) {
+            rarityMap.set(product.rarity.id, product.rarity);
+        }
+    }
+
+    return Array.from(rarityMap.values());
+  }
+
   public async createRarity( name: string ) {
     try {
       return await prisma.rarity.create( {

@@ -21,6 +21,9 @@ const brandsResolvers = {
         throw new Error( "Failed to retrieve brands" );
       }
     },
+    getBrandsByCategory: async (_: any, args: { categoryId: number }) => {
+      return BrandsService.getBrandsByCategory(args.categoryId);
+  },
   },
 
   Mutation: {

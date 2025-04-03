@@ -17,6 +17,7 @@ const brandsTypeDefs = gql`
 
   type Query {
     getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
+    getBrandsByCategory(categoryId: Int!): [ProductBrands!]!
   }
 
   type Mutation {

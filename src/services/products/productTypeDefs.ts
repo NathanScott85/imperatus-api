@@ -15,34 +15,31 @@ type Product {
     slug: String
     brand: ProductBrands!
     preorder: Boolean!
-    rarities: [Rarity!]!
+    rarity: Rarity
     variant: ProductVariant
     cardType: CardType
   }
 
 input ProductFilters {
-    brandId: Int
-    setId: Int
-    variantId: Int
-    rarityIds: [Int]
-    cardTypeId: Int
-    productTypeId: Int
+    brandId: [Int]
+    setId: [Int]
+    rarityId: [Int]
+    inStockOnly: Boolean
+    outOfStockOnly: Boolean
+    preorderOnly: Boolean
     priceMin: Float
     priceMax: Float
-    preorder: Boolean
-    stockMin: Int
-    stockMax: Int
 }
 
 scalar Upload
 
 type File {
-  id: ID!
-  url: String!
-  key: String!
-  fileName: String!
-  contentType: String!
-  createdAt: String!
+    id: ID!
+    url: String!
+    key: String!
+    fileName: String!
+    contentType: String!
+    createdAt: String!
 }
 
 type ProductType {
@@ -62,6 +59,9 @@ type Stock {
 
 type PaginatedProducts {
     products: [Product!]!
+    brands: [ProductBrands!]!
+    sets: [ProductSets!]!
+    rarities: [Rarity!]!
     totalCount: Int!
     totalPages: Int!
     currentPage: Int!
@@ -72,13 +72,6 @@ type ProductBrands {
     name: String!
     description: String
     img: File
-}
-
-type PaginatedRarities {
-    rarities: [Rarity!]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int!
 }
 
 type Query {
@@ -106,19 +99,21 @@ input StockInput {
 
 type Mutation {
    createProduct(
-        name: String!
-        price: Float!
-        productTypeId: Int
-        brandId: Int
-        setId: Int
-        description: String
-        img: Upload
-        categoryId: Int
-        cardTypeId: Int
-        stock: StockInput
-        preorder: Boolean!
-        rrp: Float
-    ): Product
+    name: String!
+    price: Float!
+    productTypeId: Int!
+    cardTypeId: Int
+    brandId: Int!
+    setId: Int
+    description: String
+    img: Upload
+    categoryId: Int!
+    stock: StockInput!
+    preorder: Boolean!
+    rrp: Float
+    variantId: Int
+    rarityId: Int
+  ): Product!
     updateProduct(
         id: ID!
         name: String

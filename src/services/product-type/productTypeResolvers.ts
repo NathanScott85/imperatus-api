@@ -1,4 +1,4 @@
-import { ApolloError, AuthenticationError } from 'apollo-server';
+import { ApolloError } from 'apollo-server';
 import ProductTypesService from './';
 
 const productTypesResolvers = {

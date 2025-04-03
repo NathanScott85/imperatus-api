@@ -1,9 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { ApolloError } from "apollo-server";
 import UploadService from "../upload";
+import BrandsService from '../brands';
+import ProductSetsService from "../product-sets";
+import RarityService from "../card-rarity";
 import { prisma } from "../../server";
 import { formatSlug } from "../../lib";
-
 
 class CategoriesService {
   public async getAllCategories(
@@ -23,7 +25,7 @@ class CategoriesService {
       // rarityIds?: number[];
     } = {}
   ) {
-    const offset = ( page - 1 ) * limit;
+    const offset = (page - 1) * limit;
     const whereClause: Prisma.CategoryWhereInput = {
       AND: [
         search ? { name: { contains: search, mode: "insensitive" } } : {},
@@ -57,7 +59,7 @@ class CategoriesService {
           ? {
             products: {
               some: {
-                brandId: { in: Array.isArray( filters.brandId ) ? filters.brandId : [filters.brandId] },
+                brandId: { in: Array.isArray(filters.brandId) ? filters.brandId : [filters.brandId] },
               },
             },
           }
@@ -75,7 +77,7 @@ class CategoriesService {
           ? {
             products: {
               some: {
-                setId: { in: Array.isArray( filters.setId ) ? filters.setId : [filters.setId] },
+                setId: { in: Array.isArray(filters.setId) ? filters.setId : [filters.setId] },
               },
             },
           }
@@ -84,7 +86,7 @@ class CategoriesService {
           ? {
             products: {
               some: {
-                variantId: { in: Array.isArray( filters.variantId ) ? filters.variantId : [filters.variantId] },
+                variantId: { in: Array.isArray(filters.variantId) ? filters.variantId : [filters.variantId] },
               },
             },
           }
@@ -93,7 +95,7 @@ class CategoriesService {
           ? {
             products: {
               some: {
-                productTypeId: { in: Array.isArray( filters.productTypeId ) ? filters.productTypeId : [filters.productTypeId] },
+                productTypeId: { in: Array.isArray(filters.productTypeId) ? filters.productTypeId : [filters.productTypeId] },
               },
             },
           }
@@ -101,8 +103,8 @@ class CategoriesService {
       ],
     };
 
-    const [categories, totalCount] = await Promise.all( [
-      prisma.category.findMany( {
+    const [categories, totalCount] = await Promise.all([
+      prisma.category.findMany({
         where: whereClause,
         skip: offset,
         take: limit,
@@ -113,19 +115,19 @@ class CategoriesService {
             where: {
               AND: [
                 filters.brandId !== undefined
-                  ? { brandId: { in: Array.isArray( filters.brandId ) ? filters.brandId : [filters.brandId] } }
+                  ? { brandId: { in: Array.isArray(filters.brandId) ? filters.brandId : [filters.brandId] } }
                   : {},
                 filters.priceMin !== undefined ? { price: { gte: filters.priceMin } } : {},
                 filters.priceMax !== undefined ? { price: { lte: filters.priceMax } } : {},
                 filters.preorder !== undefined ? { preorder: filters.preorder } : {},
                 filters.setId !== undefined
-                  ? { setId: { in: Array.isArray( filters.setId ) ? filters.setId : [filters.setId] } }
+                  ? { setId: { in: Array.isArray(filters.setId) ? filters.setId : [filters.setId] } }
                   : {},
                 filters.variantId !== undefined
-                  ? { variantId: { in: Array.isArray( filters.variantId ) ? filters.variantId : [filters.variantId] } }
+                  ? { variantId: { in: Array.isArray(filters.variantId) ? filters.variantId : [filters.variantId] } }
                   : {},
                 filters.productTypeId !== undefined
-                  ? { productTypeId: { in: Array.isArray( filters.productTypeId ) ? filters.productTypeId : [filters.productTypeId] } }
+                  ? { productTypeId: { in: Array.isArray(filters.productTypeId) ? filters.productTypeId : [filters.productTypeId] } }
                   : {},
                 filters.stockMin !== undefined ? { stock: { amount: { gte: filters.stockMin } } } : {},
                 filters.stockMax !== undefined ? { stock: { amount: { lte: filters.stockMax } } } : {},
@@ -138,49 +140,121 @@ class CategoriesService {
               brand: true,
               set: true,
               variant: true,
-              rarities: true,
+              rarity: true,
               category: true
             },
           },
         },
-      } ),
-      prisma.category.count( {
+      }),
+      prisma.category.count({
         where: whereClause,
-      } ),
-    ] );
+      }),
+    ]);
 
     return {
       filters,
       categories,
       totalCount,
-      totalPages: Math.ceil( totalCount / limit ),
+      totalPages: Math.ceil(totalCount / limit),
       currentPage: page,
     };
   }
 
   public async getAllCategoryTypes() {
     try {
-      const productTypes = await prisma.categoryType.findMany( {
+      const productTypes = await prisma.categoryType.findMany({
         include: {
           categories: true,
         }
-      } );
+      });
       return productTypes;
-    } catch ( error ) {
-      console.error( "Error retrieving product types:", error );
-      throw new Error( "Failed to retrieve product types" );
+    } catch (error) {
+      console.error("Error retrieving product types:", error);
+      throw new Error("Failed to retrieve product types");
     }
   }
 
-  public async getCategoryById( id: string, page: number = 1, limit: number = 1000 ) {
-    const offset = ( page - 1 ) * limit;
+  public async getCategoryById(
+    id: string,
+    page: number = 1,
+    limit: number = 10,
+    filters?: {
+      brandId?: number[];
+      setId?: number[];
+      rarityId?: number[];
+      inStockOnly?: boolean;
+      outOfStockOnly?: boolean;
+      preorderOnly?: boolean;
+      priceMin?: number;
+      priceMax?: number;
+    }
+  ) {
+    const offset = (page - 1) * limit;
+    const categoryId = parseInt(id);
 
-    const [category, totalCount] = await Promise.all( [
-      prisma.category.findUnique( {
-        where: { id: parseInt( id ) },
+    const productWhere: Prisma.ProductWhereInput = {
+      categoryId,
+      ...(filters?.brandId?.length && {
+        brandId: { in: filters.brandId },
+      }),
+      ...(filters?.setId?.length && {
+        setId: { in: filters.setId },
+      }),
+      ...(filters?.rarityId?.length && {
+        rarityId: { in: filters.rarityId },
+      }),
+      ...(filters?.priceMin !== undefined && filters?.priceMax !== undefined && {
+        price: {
+          gte: filters.priceMin,
+          lte: filters.priceMax,
+        },
+      }),
+      ...(filters?.priceMin !== undefined && filters?.priceMax === undefined && {
+        price: { gte: filters.priceMin },
+      }),
+      ...(filters?.priceMax !== undefined && filters?.priceMin === undefined && {
+        price: { lte: filters.priceMax },
+      }),
+    };
+
+    const inStock = filters?.inStockOnly === true;
+    const outOfStock = filters?.outOfStockOnly === true;
+    const preorder = filters?.preorderOnly === true;
+
+    if (inStock && outOfStock) {
+      productWhere.OR = [
+        { stock: { is: { amount: { gt: 0 } } } },
+        { stock: { is: { amount: 0 } } },
+      ];
+    } else if (inStock) {
+      productWhere.stock = {
+        is: { amount: { gt: 0 } },
+      };
+    } else if (outOfStock) {
+      productWhere.stock = {
+        is: { amount: 0 },
+      };
+    }
+
+    if (preorder) {
+      if (productWhere.stock?.is) {
+        productWhere.stock.is.preorder = true;
+      } else if (productWhere.stock) {
+        productWhere.stock.is = { preorder: true };
+      } else {
+        productWhere.stock = {
+          is: { preorder: true },
+        };
+      }
+    }
+
+    const [category, totalCount, brands, sets, rarities, hasInStock, hasPreorder, hasOutOfStock] = await Promise.all([
+      prisma.category.findUnique({
+        where: { id: categoryId },
         include: {
           type: true,
           products: {
+            where: productWhere,
             skip: offset,
             take: limit,
             include: {
@@ -190,29 +264,68 @@ class CategoriesService {
               set: true,
               variant: true,
               cardType: true,
-              rarities: { include: { rarity: true } },
+              rarity: true,
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  slug: true,
+                },
+              },
             },
           },
           img: true,
         },
-      } ),
-      prisma.product.count( { where: { categoryId: parseInt( id ) } } ),
-    ] );
+      }),
+      prisma.product.count({ where: productWhere }),
+      BrandsService.getBrandsByCategory(categoryId),
+      ProductSetsService.getSetsByCategory(categoryId),
+      RarityService.getRaritiesByCategory(categoryId),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { amount: { gt: 0 } } },
+        },
+      }),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { preorder: true } },
+        },
+      }),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { amount: 0 } },
+        },
+      }),
+    ]);
 
-    if ( !category ) {
-      throw new Error( `Category with ID ${id} not found` );
+    if (!category || !category.products) {
+      throw new Error(`Category with ID ${id} not found or has no products`);
     }
+
+    const stockStatus = {
+      hasInStock: hasInStock > 0,
+      hasPreorder: hasPreorder > 0,
+      hasOutOfStock: hasOutOfStock > 0,
+    };
 
     return {
       ...category,
+      brands,
+      sets,
+      rarities,
+      stockStatus,
       totalCount,
-      totalPages: Math.ceil( totalCount / limit ),
+      totalPages: Math.ceil(totalCount / limit),
       currentPage: page,
     };
   }
 
-  public async getCategoryByName( name: string ) {
-    return await prisma.category.findUnique( {
+  public async getCategoryByName(name: string) {
+    return await prisma.category.findUnique({
       where: { name },
       include: {
         type: true,
@@ -223,7 +336,7 @@ class CategoriesService {
         },
         img: true,
       },
-    } );
+    });
   }
 
   public async createCategory(
@@ -233,27 +346,27 @@ class CategoriesService {
   ): Promise<any> {
     try {
 
-      if ( !name ) throw new Error( "Category name is required." );
-  
+      if (!name) throw new Error("Category name is required.");
+
       const normalizedName = name.toLowerCase();
       const normalizedType = name.toLowerCase();
-  
+
       const existingCategory = await prisma.category.findFirst({
         where: { name: { equals: normalizedName, mode: "insensitive" } },
       });
-  
-      if ( existingCategory ) {
-        throw new Error( "A category with this name already exists. Please choose a different name." );
+
+      if (existingCategory) {
+        throw new Error("A category with this name already exists. Please choose a different name.");
       }
-  
+
       let categoryType = await prisma.categoryType.upsert({
         where: { name: normalizedType },
         update: {},
         create: { name: normalizedType },
       });
-  
+
       const slug = formatSlug(name);
-  
+
       const category = await prisma.category.create({
         data: {
           name,
@@ -262,14 +375,14 @@ class CategoriesService {
           categoryTypeId: categoryType.id,
         },
       });
-  
+
       if (img) {
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
-  
+
         const { s3Url, key, fileName, contentType } =
           await UploadService.processUpload(stream, filename, mimetype);
-  
+
         const fileRecord = await prisma.file.create({
           data: {
             url: s3Url,
@@ -278,18 +391,18 @@ class CategoriesService {
             contentType,
           },
         });
-  
+
         await prisma.category.update({
           where: { id: category.id },
           data: { imgId: fileRecord.id },
         });
       }
-  
+
       const fullCategory = await prisma.category.findUnique({
         where: { id: category.id },
         include: { img: true, type: true, },
       });
-  
+
       return fullCategory;
     } catch (error) {
       console.error("Error while creating category:", error);
@@ -302,41 +415,41 @@ class CategoriesService {
     }
   }
 
-  public async deleteCategory( id: string ) {
+  public async deleteCategory(id: string) {
     try {
-      const category = await prisma.category.findUnique( {
-        where: { id: parseInt( id ) },
+      const category = await prisma.category.findUnique({
+        where: { id: parseInt(id) },
         include: { products: true, img: true },
-      } );
+      });
 
-      if ( !category ) {
+      if (!category) {
         throw new ApolloError(
           `Category with ID ${id} does not exist`,
           "CATEGORY_NOT_FOUND"
         );
       }
 
-      if ( category.products.length > 0 ) {
-        await prisma.product.deleteMany( {
-          where: { categoryId: parseInt( id ) },
-        } );
+      if (category.products.length > 0) {
+        await prisma.product.deleteMany({
+          where: { categoryId: parseInt(id) },
+        });
       }
 
-      if ( category.img ) {
-        await UploadService.deleteFileFromS3( category.img.key );
-        await prisma.file.delete( {
+      if (category.img) {
+        await UploadService.deleteFileFromS3(category.img.key);
+        await prisma.file.delete({
           where: { id: category.img.id },
-        } );
+        });
       }
 
-      await prisma.category.delete( {
-        where: { id: parseInt( id ) },
-      } );
+      await prisma.category.delete({
+        where: { id: parseInt(id) },
+      });
 
       return { message: "Category deleted successfully" };
-    } catch ( error ) {
-      console.error( "Error in deleteCategory method:", error );
-      throw new ApolloError( "Failed to delete category", "DELETE_FAILED" );
+    } catch (error) {
+      console.error("Error in deleteCategory method:", error);
+      throw new ApolloError("Failed to delete category", "DELETE_FAILED");
     }
   }
 
