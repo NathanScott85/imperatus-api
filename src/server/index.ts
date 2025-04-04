@@ -57,7 +57,7 @@ export const startServer = async (): Promise<http.Server> => {
             query: requestContext.request.query,
             variables: requestContext.request.variables,
           });
-          graphqlRequestsTotal.inc(); // Increment request count
+          graphqlRequestsTotal.inc();
 
           return {
             async didEncounterErrors(requestContext) {
@@ -66,7 +66,7 @@ export const startServer = async (): Promise<http.Server> => {
                 query: requestContext.request.query,
                 variables: requestContext.request.variables,
               });
-              graphqlErrorsTotal.inc(); // Increment error count
+              graphqlErrorsTotal.inc();
             },
             async willSendResponse(requestContext) {
               const responseBody = requestContext.response.body;
@@ -87,9 +87,22 @@ export const startServer = async (): Promise<http.Server> => {
 
   app.use(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }));
 
+  const allowedOrigins = (process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map(origin => origin.trim());
+
   app.use(
     "/graphql",
-    cors<cors.CorsRequest>(),
+    cors<cors.CorsRequest>({
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
+      credentials: true,
+    }),
     express.json(),
     bodyParser.json(),
     expressMiddleware(server, {
