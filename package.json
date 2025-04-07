@@ -10,6 +10,7 @@
     "ps": "dotenv -e .env.development npx prisma studio",
     "migrate": "dotenv -e .env.development npx prisma migrate dev --name init",
     "seed": "dotenv -e .env.development -- ts-node src/seed/user.ts",
+    "test-user": "dotenv -e .env.development -- ts-node src/seed/seed-test-user.ts" ,
     "migrateprod": "dotenv -e .env.production -- npx prisma migrate deploy",
     "generate": "dotenv -e .env.development -- npx prisma generate",
     "generateprod": "dotenv -e .env.production -- npx prisma generate",

@@ -7,33 +7,40 @@ const productResolvers = {
   Query: {
     getAllProducts: async (_: any, args: any) => {
       const {
-          page = 1,
-          limit = 10,
-          search = '',
-          filters
+        page = 1,
+        limit = 10,
+        search = '',
+        filters
       } = args;
       return await ProductsService.getAllProducts(page, limit, search, filters);
-  },
-    getProductById: async ( _: any, args: { id: string } ) => {
+    },
+    getAllPreorders: async (_: any, args: any) => {
+      const { page = 1, limit = 10, search = '', filters } = args;
+      return await ProductsService.getAllPreorders(page, limit, search, filters);
+    },
+    getPreordersById: async (_: any, { id, page, limit, filters }: any) => {
+      return await ProductsService.getPreordersById(id, page, limit, filters);
+    },
+    getProductById: async (_: any, args: { id: string }) => {
       try {
-        return await ProductsService.getProductById( parseInt( args.id ) );
-      } catch ( error ) {
-        console.error( "Error in product resolver:", error );
-        throw new ApolloError( "Failed to retrieve product" );
+        return await ProductsService.getProductById(parseInt(args.id));
+      } catch (error) {
+        console.error("Error in product resolver:", error);
+        throw new ApolloError("Failed to retrieve product");
       }
     },
     getLatestProducts: async () => {
       try {
-          return await ProductsService.getLatestProducts();
+        return await ProductsService.getLatestProducts();
       } catch (error) {
-          console.error("Error in getLatestProducts resolver:", error);
-          throw new ApolloError("Failed to retrieve latest products");
+        console.error("Error in getLatestProducts resolver:", error);
+        throw new ApolloError("Failed to retrieve latest products");
       }
-    },  
+    },
   },
 
   Mutation: {
-    createProduct: async ( _: any, args: any ) => {
+    createProduct: async (_: any, args: any) => {
       const {
         name,
         price,
@@ -69,9 +76,9 @@ const productResolvers = {
         );
 
         return newProduct;
-      } catch ( error ) {
-        console.error( "Error in createProduct resolver:", error );
-        throw new Error( "Failed to create product." );
+      } catch (error) {
+        console.error("Error in createProduct resolver:", error);
+        throw new Error("Failed to create product.");
       }
     },
 
@@ -110,12 +117,12 @@ const productResolvers = {
       },
       { user }: any
     ): Promise<any> => {
-      if ( !user ) {
-        throw new AuthenticationError( "You must be logged in" );
+      if (!user) {
+        throw new AuthenticationError("You must be logged in");
       }
 
-      if ( !isAdminOrOwner( user ) ) {
-        throw new AuthenticationError( "Permission denied" );
+      if (!isAdminOrOwner(user)) {
+        throw new AuthenticationError("Permission denied");
       }
 
       try {
@@ -138,13 +145,13 @@ const productResolvers = {
           rrp
         );
 
-        if ( !updatedProduct ) {
-          throw new ApolloError( "Product update failed. No product returned." );
+        if (!updatedProduct) {
+          throw new ApolloError("Product update failed. No product returned.");
         }
         return updatedProduct
-      } catch ( error ) {
-        console.error( "Error in updateProduct resolver:", error );
-        throw new ApolloError( "Failed to update product", "UPDATE_FAILED" );
+      } catch (error) {
+        console.error("Error in updateProduct resolver:", error);
+        throw new ApolloError("Failed to update product", "UPDATE_FAILED");
       }
 
     },
@@ -180,19 +187,19 @@ const productResolvers = {
       args: { id: string },
       { user }: any
     ): Promise<{ message: string }> => {
-      if ( !user ) {
-        throw new AuthenticationError( "You must be logged in" );
+      if (!user) {
+        throw new AuthenticationError("You must be logged in");
       }
 
-      if ( !isAdminOrOwner( user ) ) {
-        throw new AuthenticationError( "Permission denied" );
+      if (!isAdminOrOwner(user)) {
+        throw new AuthenticationError("Permission denied");
       }
 
       try {
-        return await ProductsService.deleteProduct( args.id );
-      } catch ( error ) {
-        console.error( "Error in deleteProduct resolver:", error );
-        throw new ApolloError( "Failed to delete product", "DELETE_FAILED" );
+        return await ProductsService.deleteProduct(args.id);
+      } catch (error) {
+        console.error("Error in deleteProduct resolver:", error);
+        throw new ApolloError("Failed to delete product", "DELETE_FAILED");
       }
     },
   },
