@@ -83,6 +83,18 @@ type Query {
     ): PaginatedProducts!
     getProductById(id: ID!): Product
     getLatestProducts: [Product!]!
+    getAllPreorders(
+      page: Int
+      limit: Int
+      search: String
+      filters: ProductFilters
+    ): PaginatedProducts!
+    getPreordersById(
+        id: ID!
+        page: Int
+        limit: Int
+        filters: ProductFilters
+    ): PaginatedProducts!
 }
 
 type Message {
