@@ -1,5 +1,14 @@
+
+import * as dotenv from 'dotenv';
+
+if (!process.env.HEROKU) {
+  const envPath = process.env.NODE_ENV === 'development'
+      ? '.env.development'
+      : '.env.production';
+  dotenv.config({ path: envPath });
+}
+
 import { startServer } from "./server"; // Import the startServer function from server.ts
-import 'dotenv/config';
 
 async function start() {
   try {
