@@ -9,7 +9,6 @@ import productTypesTypeDefs from '../product-type/productTypeTypeDefs';
 import rarityTypeDefs from '../card-rarity/cardRarityTypeDefs';
 import roleTypeDefs from '../roles/roleTypeDefs';
 import variantTypeDefs from '../variants/variantsTypedefs';
-import cardTypeResolvers from '../card-types/cardTypeResolvers';
 import cardTypeDefs from '../card-types/cardTypeTypeDefs';
 
 const typeDefs = gql`
@@ -142,6 +141,7 @@ const typeDefs = gql`
             postcode: String
         ): User
         sendVerificationEmail(userId: Int!): Message!
+        resendVerificationEmail(userId: Int!): Message
         verifyEmail(token: String!): Message!
         deleteUser(id: Int!): Message!
         refreshToken(refreshToken: String!): AuthPayload!

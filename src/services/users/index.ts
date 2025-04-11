@@ -76,25 +76,27 @@ class UserService {
     }
   }
 
-  public async getUserById( id: number ): Promise<any | null> {
-    const user = await prisma.user.findUnique( {
-      where: { id },
-      include: {
-        userRoles: {
-          include: {
-            role: true,
-          },
+  public async getUserById(id: number): Promise<any | null> {
+    const user = await prisma.user.findUnique({
+        where: { id },
+        include: {
+            userRoles: {
+                include: {
+                    role: true,
+                },
+            },
         },
-      },
-    } );
+    });
 
-    if ( !user ) return null;
+    if (!user) return null;
 
     return {
-      id: user.id,
-      roles: user.userRoles.map( ( userRole ) => userRole.role.name ),
+        id: user.id,
+        email: user.email,
+        roles: user.userRoles.map((userRole) => userRole.role.name),
     };
-  }
+}
+
   public async getCurrentPassword( id: number ): Promise<any> {
     const user = await prisma.user.findUnique( {
       where: { id }, // Use the passed in `id` directly
@@ -288,14 +290,13 @@ class UserService {
         throw new UserInputError( "All fields are required." );
       }
 
-      // Convert the string dob to a Date object
       const dobAsDate = new Date( parseInt( dob ) * 1000 );
       const updatedUser = await prisma.user.update( {
         where: { id },
         data: {
           fullname: fullname,
           email: email,
-          dob: dobAsDate, // Ensure the Date object is correctly passed to Prisma
+          dob: dobAsDate,
         },
       } );
 
@@ -339,45 +340,96 @@ class UserService {
     }
   }
 
-  public async sendVerificationEmail( id: number ) {
+  public async sendVerificationEmail(id: number) {
     try {
-      const user = await prisma.user.findUnique( { where: { id: id } } );
-      if ( !user ) {
-        throw new Error( "User not found" );
-      }
+        const user = await prisma.user.findUnique({ where: { id } });
 
-      const verificationToken = uuidv4();
-      const verificationTokenExpiry = new Date(
-        Date.now() + 24 * 60 * 60 * 1000
-      );
+        if (!user || !user.email) {
+            throw new Error("User not found or email not provided");
+        }
 
-      await prisma.user.update( {
-        where: { id: id },
-        data: { verificationToken, verificationTokenExpiry },
-      } );
+        const verificationToken = uuidv4();
+        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-      const subject = "Email Verification";
-      const text = `Please verify your email by using the following token: ${verificationToken}`;
-      const html = `<p>Please verify your email by using the following token: <strong>${verificationToken}</strong></p>`;
+        await prisma.user.update({
+            where: { id },
+            data: { verificationToken, verificationTokenExpiry },
+        });
 
-      await EmailService.sendMail( {
-        from: process.env.EMAIL_USER!,
-        to: user.email,
-        subject,
-        text,
-        html,
-      } );
+        const subject = "Email Verification";
+        const verificationUrl = `${process.env.FRONTEND_URL}/account/verify-email?token=${verificationToken}`;
 
-      return { message: "Verification email sent" };
-    } catch ( error: any ) {
-      if ( error.message === "User not found" ) {
-        throw error;
-      }
-      throw new Error( "Failed to send verification email" );
+        const context = {
+            token: verificationToken,
+            verificationUrl,
+        };
+
+        const templatePath = 'verify-email.hbs';
+
+        await EmailService.sendMail({
+            from: process.env.EMAIL_FROM!,
+            to: user.email,
+            subject,
+            context,
+            templatePath,
+        });
+
+        return { success: true, message: "Verification email sent" };
+    } catch (error: any) {
+        console.error('UserService: Error sending verification email:', error);
+        if (error.message === "User not found or email not provided") {
+            throw error;
+        }
+        throw new Error("Failed to send verification email");
     }
   }
 
-  public async verifyEmail( token: string ) {
+  public async resendVerificationEmail(userId: number) {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user || !user.email) {
+            throw new Error("User not found or email not provided");
+        }
+
+        // Create a new verification token and set expiry
+        const verificationToken = uuidv4();
+        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours expiry
+
+        // Update user record with new verification token and expiry
+        await prisma.user.update({
+            where: { id: userId },
+            data: { verificationToken, verificationTokenExpiry },
+        });
+
+        // Send the verification email with the new token
+        const verificationUrl = `${process.env.FRONTEND_URL}/account/verify-email?token=${verificationToken}`;
+        const context = {
+            token: verificationToken,
+            verificationUrl,
+        };
+
+        const subject = "Email Verification";
+        const templatePath = 'verify-email.hbs';
+
+        await EmailService.sendMail({
+            from: process.env.EMAIL_FROM!,
+            to: user.email,
+            subject,
+            context,
+            templatePath,
+        });
+
+        return { success: true, message: "Verification email sent successfully." };
+    } catch (error) {
+        console.error('Error in resendVerificationEmail:', error);
+        throw new Error("Failed to resend the verification email.");
+    }
+  }
+
+  public async verifyEmail(token: string) {
     try {
       const user = await prisma.user.findFirst( {
         where: {
@@ -388,27 +440,26 @@ class UserService {
         },
       } );
 
-      if ( !user ) {
-        throw new Error( "Invalid or expired verification token" );
-      }
+        if (!user) {
+            throw new Error("Invalid or expired verification token");
+        }
 
-      await prisma.user.update( {
-        where: { id: user.id },
-        data: {
-          verificationToken: null,
-          verificationTokenExpiry: null,
-          emailVerified: true,
-        },
-      } );
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                verificationToken: null,
+                verificationTokenExpiry: null,
+                emailVerified: true,
+            },
+        });
 
-      return { message: "Email successfully verified" };
-    } catch ( error: any ) {
-      if ( error.message === "Invalid or expired verification token" ) {
-        throw error;
-      }
-      throw new Error( "Failed to verify email" );
+        return { message: "Email successfully verified." };
+    } catch (error) {
+        console.error("Verification failed:", error);
+        throw new Error("Failed to verify email. Please try again later.");
     }
   }
+
 }
 
 export default new UserService();
