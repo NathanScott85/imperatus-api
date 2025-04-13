@@ -61,7 +61,7 @@ class AuthenticationService {
       where: { id: user.id },
       data: {
         refreshToken: refreshToken,
-        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
   
@@ -177,6 +177,7 @@ class AuthenticationService {
   }
 
   public async requestPasswordReset(email: string) {
+  
     const user = await UserService.findUserByEmail(email);
     if (!user) {
       throw new Error(
@@ -198,7 +199,7 @@ class AuthenticationService {
     const resetLink = `${process.env.FRONTEND_URL}/account/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
   
     const subject = "Password Reset";
-    const templatePath = "emails/templates/reset-password.hbs";
+    const templatePath = "reset-password.hbs";
     const context = { resetLink };
   
     await EmailService.sendMail({

@@ -136,6 +136,7 @@ const resolvers = {
     },
   
     requestPasswordReset: async (_: any, { email }: { email: string }) => {
+      
       const dbUser = await UserService.findUserByEmail(email);
       if (!dbUser) {
         throw new UserInputError("User with this email does not exist.");
