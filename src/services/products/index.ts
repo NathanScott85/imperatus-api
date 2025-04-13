@@ -519,7 +519,6 @@ class ProductsService {
 
   public async getProductById(id: number) {
     try {
-      console.log(id, 'id');
       const product = await prisma.product.findUnique({
         where: { id },
         include: {
@@ -534,7 +533,7 @@ class ProductsService {
           brand: true,
         },
       });
-      console.log(product?.category)
+
       if (!product) {
         throw new Error("Product not found");
       }

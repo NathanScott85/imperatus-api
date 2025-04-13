@@ -65,10 +65,9 @@ class AuthorizationTokenService {
     }
   }
 
-  // Generate a reset token for password recovery
   public static generateResetToken() {
     const resetToken = randomBytes(32).toString("hex");
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour expiry
+    const resetTokenExpiry = new Date(Date.now() + 3600000);
     return { resetToken, resetTokenExpiry };
   }
 }

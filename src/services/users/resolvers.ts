@@ -5,7 +5,6 @@ import {
 } from "apollo-server";
 import UserService from "../users";
 import AuthenticationService from "../authentication";
-import RoleService from "../roles"; // Import RoleService
 import AuthorizationTokenService from "../token";
 import {
   isOwner,
@@ -40,8 +39,8 @@ const resolvers = {
     ...roleResolvers.Query,
     ...variantResolvers.Query,
     ...cardTypeResolvers.Query,
-    getVerificationStatus: async ( _: any, { userId }: any ) => {
-      const verification = await UserService.getVerificationStatus( userId );
+    getVerificationStatus: async (_: any, { userId }: any) => {
+      const verification = await UserService.getVerificationStatus(userId);
       return verification;
     },
     storeCreditHistory: async (
@@ -52,26 +51,26 @@ const resolvers = {
         offset = 0,
       }: { userId: number; limit: number; offset: number }
     ) => {
-      const totalCount = await prisma.storeCreditTransaction.count( {
+      const totalCount = await prisma.storeCreditTransaction.count({
         where: { userId },
-      } );
+      });
 
-      const transactions = await prisma.storeCreditTransaction.findMany( {
+      const transactions = await prisma.storeCreditTransaction.findMany({
         where: { userId },
         orderBy: { date: "desc" },
         take: limit,
         skip: offset,
-      } );
+      });
 
-      const formattedTransactions = transactions.map( ( transaction ) => {
+      const formattedTransactions = transactions.map((transaction) => {
         return {
           ...transaction,
-          date: moment( transaction.date )
-            .tz( "Europe/London" )
-            .format( "YYYY-MM-DD" ),
-          time: moment( transaction.date ).tz( "Europe/London" ).format( "HH:mm:ss" ),
+          date: moment(transaction.date)
+            .tz("Europe/London")
+            .format("YYYY-MM-DD"),
+          time: moment(transaction.date).tz("Europe/London").format("HH:mm:ss"),
         };
-      } );
+      });
 
       return {
         transactions: formattedTransactions,
@@ -111,15 +110,15 @@ const resolvers = {
           "refresh"
         );
 
-        if ( !userFromToken || userFromToken.id !== id ) {
+        if (!userFromToken || userFromToken.id !== id) {
           throw new AuthenticationError(
             "You must be logged in or have permission to change this password"
           );
         }
 
-        const user = await UserService.getUserById( id );
-        if ( !user ) {
-          throw new Error( "User not found" );
+        const user = await UserService.getUserById(id);
+        if (!user) {
+          throw new Error("User not found");
         }
 
         const response = await AuthenticationService.changeUserPassword(
@@ -129,21 +128,21 @@ const resolvers = {
         );
 
         return { message: response.message };
-      } catch ( error ) {
-        const errorMessage = ( error as Error ).message;
-        console.error( "Failed to change password:", errorMessage );
-        throw new Error( `Failed to change password: ${errorMessage}` );
+      } catch (error) {
+        const errorMessage = (error as Error).message;
+        console.error("Failed to change password:", errorMessage);
+        throw new Error(`Failed to change password: ${errorMessage}`);
       }
     },
-    requestPasswordReset: async ( _: any, { email }: { email: string } ) => {
-      // Ensure the provided email exists in the database
-      const dbUser = await UserService.findUserByEmail( email );
-      if ( !dbUser ) {
-        throw new UserInputError( "User with this email does not exist." );
+  
+    requestPasswordReset: async (_: any, { email }: { email: string }) => {
+      
+      const dbUser = await UserService.findUserByEmail(email);
+      if (!dbUser) {
+        throw new UserInputError("User with this email does not exist.");
       }
 
       try {
-        // Proceed to request a password reset
         const response = await AuthenticationService.requestPasswordReset(
           email
         );
@@ -151,8 +150,8 @@ const resolvers = {
         return {
           message: response.message,
         };
-      } catch ( error ) {
-        console.error( "Error requesting password reset:", error );
+      } catch (error) {
+        console.error("Error requesting password reset:", error);
 
         return {
           message:
@@ -181,8 +180,8 @@ const resolvers = {
         return {
           message: response.message,
         };
-      } catch ( error ) {
-        console.error( "Error resetting password:", error );
+      } catch (error) {
+        console.error("Error resetting password:", error);
 
         return {
           message:
@@ -192,53 +191,31 @@ const resolvers = {
         };
       }
     },
-
     verifyEmail: async (
       _: unknown,
       args: { token: string }
     ): Promise<{ message: string }> => {
       try {
-        const user = await prisma.user.findFirst( {
-          where: {
-            verificationToken: args.token,
-            verificationTokenExpiry: {
-              gte: new Date(),
-            },
-          },
-        } );
-
-        if ( !user ) {
-          throw new Error( "Invalid or expired verification token" );
-        }
-
-        await prisma.user.update( {
-          where: { id: user.id },
-          data: {
-            verificationToken: null,
-            verificationTokenExpiry: null,
-            emailVerified: true,
-          },
-        } );
-
-        return { message: "Email verified successfully." };
-      } catch ( error ) {
-        console.error( "Verification failed:", error );
-        return { message: "Failed to verify email. Please try again later." };
+        const result = await UserService.verifyEmail(args.token);
+        return result;
+      } catch (error: any) {
+        console.error("Verification failed:", error);
+        throw new Error(error.message || "Failed to verify email. Please try again later.");
       }
     },
 
-    async sendVerificationEmail( _: any, { userId }: any ) {
+    async sendVerificationEmail(_: any, { userId }: any) {
       try {
-        const user = await UserService.getUserById( userId );
+        const user = await UserService.getUserById(userId);
 
-        if ( !user || !user.email ) {
-          console.error( "User not found or email not provided" );
+        if (!user || !user.email) {
+          console.error('Resolver: User not found or email missing');
           return { message: "User not found or email not provided" };
         }
 
-        const sendEmail = await UserService.sendVerificationEmail( userId );
+        const sendEmail = await UserService.sendVerificationEmail(userId);
 
-        if ( !sendEmail ) {
+        if (!sendEmail) {
           return {
             success: false,
             message: "Failed to send verification email.",
@@ -246,47 +223,62 @@ const resolvers = {
         }
 
         return { message: "Verification email sent successfully." };
-      } catch ( error ) {
-        console.error( "Error in sendVerificationEmail:", error );
+      } catch (error) {
+        console.error('Resolver: Error in sendVerificationEmail:', error);
         return {
+          success: false,
           message: "An error occurred while sending the verification email.",
         };
       }
     },
 
+    async resendVerificationEmail(_: any, { userId }: { userId: number }) {
+      try {
+        const result = await UserService.resendVerificationEmail(userId);
+        return result;
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          return { message: error.message || "An error occurred" };
+        } else {
+          return { message: "An unknown error occurred" };
+        }
+      }
+    },    
+  
     loginUser: async (
       _: unknown,
       args: { email: string; password: string }
     ) => {
       try {
-        const { accessToken, user } = await AuthenticationService.loginUser(
+        const { accessToken, refreshToken, user } = await AuthenticationService.loginUser(
           args.email,
           args.password
         );
-
-        const { refreshToken } =
-          AuthorizationTokenService.refreshToken( accessToken );
-
-        return { accessToken, user, refreshToken };
-      } catch ( error ) {
-        console.error( error, "error" );
-        throw new AuthenticationError( "Invalid email or password" );
+        return {
+          accessToken,
+          refreshToken,
+          user,
+        };
+      } catch (error) {
+        console.error(error, "error");
+        throw new AuthenticationError("Invalid email or password");
       }
     },
 
-    logoutUser: async ( parent: any, args: any, context: any ) => {
+    logoutUser: async (parent: any, args: any, context: any) => {
       const { refreshToken } = context;
 
-      if ( !refreshToken ) {
-        throw new AuthenticationError( "Refresh token is missing." );
+      if (!refreshToken) {
+        throw new AuthenticationError("Refresh token is missing.");
       }
 
-      const result = await AuthenticationService.logoutUser( refreshToken );
+      const result = await AuthenticationService.logoutUser(refreshToken);
 
       return result;
     },
-    refreshToken: async ( _: unknown, { refreshToken }: any ) => {
-      return await AuthorizationTokenService.refreshToken( refreshToken );
+  
+    refreshToken: async (_: unknown, { refreshToken }: any) => {
+      return await AuthorizationTokenService.refreshToken(refreshToken);
     },
 
     updateUserStoreCredit: async (
@@ -294,45 +286,42 @@ const resolvers = {
       { id, amount }: { id: number; amount: number },
       { user }: { user: any }
     ) => {
-      if ( !user || !isOwner( user ) ) {
+      if (!user || !isOwner(user)) {
         throw new AuthenticationError(
           "You must be logged in to update store credit."
         );
       }
 
-      const existingUser = await prisma.user.findUnique( {
+      const existingUser = await prisma.user.findUnique({
         where: { id },
-      } );
+      });
 
-      if ( !existingUser ) {
-        throw new Error( "User not found." );
+      if (!existingUser) {
+        throw new Error("User not found.");
       }
 
       const newBalance = amount;
 
-      // Log the transaction
       const transactionType =
         newBalance > existingUser.storeCredit ? "credit" : "subtraction";
 
-      // Get the current date and time as a DateTime object
-      const currentDateTime = moment().tz( "Europe/London" ).toDate();
+      const currentDateTime = moment().tz("Europe/London").toDate();
 
-      await prisma.storeCreditTransaction.create( {
+      await prisma.storeCreditTransaction.create({
         data: {
           userId: id,
           type: transactionType,
-          amount: Math.abs( amount - existingUser.storeCredit ),
+          amount: Math.abs(amount - existingUser.storeCredit),
           balanceAfter: newBalance,
-          date: currentDateTime, // Use the full DateTime object here
-          time: moment( currentDateTime ).format( "HH:mm:ss" ), // Still storing time separately if required
+          date: currentDateTime,
+          time: moment(currentDateTime).format("HH:mm:ss"),
         },
-      } );
+      });
 
-      // Update the user's store credit
-      const updatedUser = await prisma.user.update( {
+      const updatedUser = await prisma.user.update({
         where: { id },
         data: { storeCredit: newBalance },
-      } );
+      });
 
       return updatedUser;
     },
