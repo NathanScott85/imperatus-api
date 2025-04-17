@@ -131,6 +131,12 @@ class DiscountCodeService {
       throw err;
     }
   }
+
+  async deleteDiscountCode(id: number) {
+    await prisma.discountCode.delete({
+      where: { id },
+    });
+  }
 }
 
 export default new DiscountCodeService();

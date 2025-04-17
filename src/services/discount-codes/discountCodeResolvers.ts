@@ -76,6 +76,15 @@ const discountCodeResolvers = {
         active,
       });
     },
+    deleteDiscountCode: async (_: any, { id }: { id: number }) => {
+      try {
+        await DiscountCodeService.deleteDiscountCode(id);
+        return true;
+      } catch (error) {
+        console.error("Failed to delete discount code:", error);
+        throw new Error("Unable to delete discount code");
+      }
+    },
   },
 };
 

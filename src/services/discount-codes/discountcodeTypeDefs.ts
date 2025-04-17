@@ -60,6 +60,7 @@ const discountCodesTypeDefs = gql`
       expiresAt: String
       active: Boolean
     ): DiscountCode
+    deleteDiscountCode(id: Int!): Boolean!
   }
 `;
 
