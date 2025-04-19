@@ -5,10 +5,12 @@ import moment from "moment";
 
 export async function calculateDiscount({
   email,
+  userId,
   subtotal,
   discountCode,
 }: {
   email: string;
+  userId?: number;
   subtotal: number;
   discountCode?: string;
 }): Promise<{
@@ -29,6 +31,7 @@ export async function calculateDiscount({
         discount.type === "percentage"
           ? (subtotal * discount.value.toNumber()) / 100
           : discount.value.toNumber();
+
       return {
         discountValue,
         discountCodeId: discount.id,
@@ -37,7 +40,9 @@ export async function calculateDiscount({
     }
   }
 
-  const firstOrder = await OrderService.getFirstOrder(email);
+  const firstOrder = userId
+    ? await OrderService.getFirstOrderByUserId(userId)
+    : await OrderService.getFirstOrderByEmail(email);
 
   if (!firstOrder) {
     return {

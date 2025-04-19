@@ -61,6 +61,18 @@ class OrderService {
     });
   }
 
+  async getFirstOrderByUserId(userId: number) {
+    return prisma.order.findFirst({
+      where: { userId },
+    });
+  }
+
+  async getFirstOrderByEmail(email: string) {
+    return prisma.order.findFirst({
+      where: { email },
+    });
+  }
+
   async getAllOrderStatuses(orderId: number) {
     return prisma.orderStatus.findMany({
       where: { orderId },
@@ -101,29 +113,67 @@ class OrderService {
     discountCode?: string;
   }) {
     return prisma.$transaction(async (tx) => {
-      const subtotal = items.reduce(
+      const user = await tx.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+
+      const validatedItems = await Promise.all(
+        items.map(async (item) => {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId },
+            include: { stock: true },
+          });
+
+          if (!product?.price || product.price.toNumber() !== item.price) {
+            throw new Error(`Invalid price for product ID ${item.productId}`);
+          }
+
+          if (!product.preorder) {
+            if (!product.stock) {
+              throw new Error(
+                `Missing stock information for product ID ${item.productId}`
+              );
+            }
+
+            if (product.stock.amount < item.quantity) {
+              throw new Error(
+                `Not enough stock for product ID ${item.productId}. Available: ${product.stock.amount}, requested: ${item.quantity}`
+              );
+            }
+          }
+
+          return {
+            ...item,
+            preorder: product.preorder,
+          };
+        })
+      );
+
+      const rawSubtotal = validatedItems.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0
       );
 
       const { discountValue, discountCodeId, isFirstOrder } =
         await calculateDiscount({
+          userId: user?.id,
           email,
-          subtotal,
+          subtotal: rawSubtotal,
           discountCode,
         });
 
-      const discountedSubtotal = Math.max(subtotal - discountValue, 0);
+      const discountedSubtotal = Math.max(rawSubtotal - discountValue, 0);
       const vatRate = 0.2;
-      const vat = (discountedSubtotal + shippingCost) * vatRate;
-      const total = discountedSubtotal + shippingCost + vat;
+      const vat = discountedSubtotal - discountedSubtotal / (1 + vatRate);
+      const total = discountedSubtotal + shippingCost;
 
       const orderNumber = await generateOrderNumber(items[0].productId);
 
       const createdOrder = await tx.order.create({
         data: {
           orderNumber,
-          subtotal: new Prisma.Decimal(subtotal),
+          subtotal: new Prisma.Decimal(rawSubtotal),
           vat: new Prisma.Decimal(vat),
           total: new Prisma.Decimal(total),
           email,
@@ -135,8 +185,9 @@ class OrderService {
           shippingCost: new Prisma.Decimal(shippingCost),
           discountCodeId,
           firstOrder: isFirstOrder,
+          userId: user?.id || null,
           items: {
-            create: items.map((item) => ({
+            create: validatedItems.map((item) => ({
               product: { connect: { id: item.productId } },
               quantity: item.quantity,
               price: new Prisma.Decimal(item.price),
@@ -148,11 +199,29 @@ class OrderService {
         },
       });
 
+      await Promise.all(
+        validatedItems.map(async (item) => {
+          if (!item.preorder) {
+            await tx.stock.update({
+              where: { productId: item.productId },
+              data: {
+                amount: {
+                  decrement: item.quantity,
+                },
+                sold: {
+                  increment: item.quantity,
+                },
+              },
+            });
+          }
+        })
+      );
+
       await VatService.createVATRecord(tx, {
         orderId: createdOrder.id,
         orderNumber: createdOrder.orderNumber,
         vatAmount: vat,
-        subtotal,
+        subtotal: rawSubtotal,
         total,
       });
 
