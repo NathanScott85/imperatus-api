@@ -48,6 +48,9 @@ const ordersResolvers = {
     ) => {
       return OrderService.createOrder(input);
     },
+    updateOrder: async (_: any, { id, input }: { id: number; input: any }) => {
+      return await OrderService.updateOrder(id, input);
+    },
     createStatus: (_: any, args: { value: string; label: string }) => {
       return OrderService.createStatus(args);
     },
