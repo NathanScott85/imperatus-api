@@ -59,6 +59,20 @@ const ordersTypeDefs = gql`
     discountCode: String
   }
 
+  input UpdateOrderInput {
+    status: String
+    name: String
+    address: String
+    city: String
+    postcode: String
+    shippingCost: Float
+    phone: String
+    email: String
+    trackingNumber: String
+    trackingProvider: String
+    items: [OrderItemInput!]
+  }
+
   type PaginatedOrders {
     orders: [Order!]!
     totalCount: Int!
@@ -75,6 +89,7 @@ const ordersTypeDefs = gql`
 
   type Mutation {
     createOrder(input: CreateOrderInput!): Order!
+    updateOrder(id: Int!, input: UpdateOrderInput!): Order!
     createStatus(value: String!, label: String!): Status!
     updateOrderStatus(id: Int!, value: String!, label: String!): Status
     deleteOrderStatus(id: Int!): DeleteResponse!

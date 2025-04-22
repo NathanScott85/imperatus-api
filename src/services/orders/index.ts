@@ -1,7 +1,41 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../server";
 import VatService from "../vat";
-import { calculateDiscount, generateOrderNumber } from "./order-utils";
+import {
+  buildUpdatedFields,
+  calculateDiscount,
+  calculateOrderTotals,
+  generateOrderNumber,
+  handleOrderItemsUpdate,
+  mergeOrderItems,
+  validateAndPrepareItem,
+} from "./order-utils";
+
+type UpdateOrderInput = {
+  name?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  postcode?: string;
+  phone?: string;
+  shippingCost?: number;
+  discountCode?: string;
+  status?: string;
+  trackingNumber?: string;
+  trackingProvider?: string;
+  items?: {
+    productId: number;
+    quantity: number;
+    price: number;
+  }[];
+};
+
+type ValidatedItem = {
+  productId: number;
+  quantity: number;
+  price: number;
+  preorder: boolean;
+};
 
 class OrderService {
   public async getAllOrders(
@@ -226,6 +260,72 @@ class OrderService {
       });
 
       return createdOrder;
+    });
+  }
+
+  async updateOrder(id: number, data: UpdateOrderInput) {
+    return prisma.$transaction(async (tx) => {
+      const existingOrder = await tx.order.findUnique({
+        where: { id },
+        include: {
+          items: { include: { product: { select: { preorder: true } } } },
+        },
+      });
+
+      if (!existingOrder) throw new Error("Order not found");
+
+      const updatedFields = buildUpdatedFields(existingOrder, data);
+
+      let validatedNewItems: ValidatedItem[] = [];
+
+      if (data.items?.length) {
+        validatedNewItems = await Promise.all(
+          data.items.map((item) => validateAndPrepareItem(tx, item))
+        );
+
+        await handleOrderItemsUpdate(
+          tx,
+          id,
+          existingOrder.items,
+          validatedNewItems
+        );
+      }
+
+      const finalOrderItems = mergeOrderItems(
+        existingOrder.items,
+        validatedNewItems
+      );
+
+      const { subtotal, vat, total, discountCodeId } =
+        await calculateOrderTotals({
+          items: finalOrderItems,
+          shippingCost: updatedFields.shippingCost,
+          userId: existingOrder.userId ?? undefined,
+          email: updatedFields.email,
+          discountCode: data.discountCode,
+        });
+
+      const updatedOrder = await tx.order.update({
+        where: { id },
+        data: {
+          ...updatedFields,
+          subtotal,
+          vat,
+          total,
+          discountCodeId,
+        },
+        include: { discountCode: true },
+      });
+
+      await VatService.updateVATRecord(tx, {
+        orderId: id,
+        orderNumber: updatedOrder.orderNumber,
+        vatAmount: vat.toNumber(),
+        subtotal: subtotal.toNumber(),
+        total: total.toNumber(),
+      });
+
+      return updatedOrder;
     });
   }
 

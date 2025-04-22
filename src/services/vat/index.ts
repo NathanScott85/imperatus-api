@@ -49,6 +49,49 @@ class VatService {
     });
   }
 
+  async updateVATRecord(
+    tx: Prisma.TransactionClient,
+    {
+      orderId,
+      orderNumber,
+      vatAmount,
+      subtotal,
+      total,
+    }: {
+      orderId: number;
+      orderNumber: string;
+      vatAmount: number;
+      subtotal: number;
+      total: number;
+    }
+  ) {
+    const existing = await tx.vATRecord.findFirst({
+      where: { orderId },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return tx.vATRecord.update({
+        where: { id: existing.id },
+        data: {
+          vatAmount: new Prisma.Decimal(vatAmount),
+          subtotal: new Prisma.Decimal(subtotal),
+          total: new Prisma.Decimal(total),
+        },
+      });
+    }
+
+    return tx.vATRecord.create({
+      data: {
+        orderId,
+        orderNumber,
+        vatAmount: new Prisma.Decimal(vatAmount),
+        subtotal: new Prisma.Decimal(subtotal),
+        total: new Prisma.Decimal(total),
+      },
+    });
+  }
+
   async getTotalVAT() {
     const result = await prisma.vATRecord.aggregate({
       _sum: {
