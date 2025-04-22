@@ -3,6 +3,7 @@ import {
   GraphQLRequestContext,
   GraphQLRequestListener,
 } from "@apollo/server";
+import helmet from "helmet";
 import client from "prom-client";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
@@ -28,6 +29,7 @@ interface MyContext {
 
 export const startServer = async (): Promise<http.Server> => {
   const app = express();
+  app.use(helmet());
   const httpServer = http.createServer(app);
 
   const collectDefaultMetrics = client.collectDefaultMetrics;
@@ -89,7 +91,7 @@ export const startServer = async (): Promise<http.Server> => {
 
   const allowedOrigins = (process.env.CORS_ORIGINS || "")
     .split(",")
-    .map(origin => origin.trim());
+    .map((origin) => origin.trim());
 
   app.use(
     "/graphql",

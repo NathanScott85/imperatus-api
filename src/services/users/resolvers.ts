@@ -1,28 +1,26 @@
 import { prisma } from "../../server";
-import {
-  AuthenticationError,
-  UserInputError,
-} from "apollo-server";
+import { AuthenticationError, UserInputError } from "apollo-server";
 import UserService from "../users";
 import AuthenticationService from "../authentication";
 import AuthorizationTokenService from "../token";
-import {
-  isOwner,
-} from "../roles/role-checks";
+import { isOwner } from "../roles/role-checks";
 import moment from "moment-timezone";
 import { GraphQLUpload } from "graphql-upload-ts";
 import categoriesResolvers from "../categories/categoriesResolvers";
 import productResolvers from "../products/productsResolvers";
 import userResolvers from "./userResolvers";
-import carouselResolvers from '../carousel/carouselResolvers'
-import promotionResolvers from '../promotions/promotionsResolvers';
-import productSetResolvers from '../product-sets/productSetResolvers';
-import brandsResolvers from '../brands/brandsResolvers';
-import productTypesResolvers from '../product-type/productTypeResolvers';
-import rarityResolvers from '../card-rarity/cardRarityResolvers';
-import roleResolvers from '../roles/rolesResolvers';
+import carouselResolvers from "../carousel/carouselResolvers";
+import promotionResolvers from "../promotions/promotionsResolvers";
+import productSetResolvers from "../product-sets/productSetResolvers";
+import brandsResolvers from "../brands/brandsResolvers";
+import productTypesResolvers from "../product-type/productTypeResolvers";
+import rarityResolvers from "../card-rarity/cardRarityResolvers";
+import roleResolvers from "../roles/rolesResolvers";
 import variantResolvers from "../variants/variantsResolvers";
 import cardTypeResolvers from "../card-types/cardTypeResolvers";
+import vatResolvers from "../vat/vatResolvers";
+import ordersResolvers from "../orders/ordersResolvers";
+import discountCodeResolvers from "../discount-codes/discountCodeResolvers";
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -39,6 +37,9 @@ const resolvers = {
     ...roleResolvers.Query,
     ...variantResolvers.Query,
     ...cardTypeResolvers.Query,
+    ...vatResolvers.Query,
+    ...discountCodeResolvers.Query,
+    ...ordersResolvers.Query,
     getVerificationStatus: async (_: any, { userId }: any) => {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
@@ -91,6 +92,8 @@ const resolvers = {
     ...roleResolvers.Mutation,
     ...variantResolvers.Mutation,
     ...cardTypeResolvers.Mutation,
+    ...discountCodeResolvers.Mutation,
+    ...ordersResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {
@@ -134,9 +137,8 @@ const resolvers = {
         throw new Error(`Failed to change password: ${errorMessage}`);
       }
     },
-  
+
     requestPasswordReset: async (_: any, { email }: { email: string }) => {
-      
       const dbUser = await UserService.findUserByEmail(email);
       if (!dbUser) {
         throw new UserInputError("User with this email does not exist.");
@@ -200,7 +202,9 @@ const resolvers = {
         return result;
       } catch (error: any) {
         console.error("Verification failed:", error);
-        throw new Error(error.message || "Failed to verify email. Please try again later.");
+        throw new Error(
+          error.message || "Failed to verify email. Please try again later."
+        );
       }
     },
 
@@ -209,7 +213,7 @@ const resolvers = {
         const user = await UserService.getUserById(userId);
 
         if (!user || !user.email) {
-          console.error('Resolver: User not found or email missing');
+          console.error("Resolver: User not found or email missing");
           return { message: "User not found or email not provided" };
         }
 
@@ -224,7 +228,7 @@ const resolvers = {
 
         return { message: "Verification email sent successfully." };
       } catch (error) {
-        console.error('Resolver: Error in sendVerificationEmail:', error);
+        console.error("Resolver: Error in sendVerificationEmail:", error);
         return {
           success: false,
           message: "An error occurred while sending the verification email.",
@@ -243,17 +247,15 @@ const resolvers = {
           return { message: "An unknown error occurred" };
         }
       }
-    },    
-  
+    },
+
     loginUser: async (
       _: unknown,
       args: { email: string; password: string }
     ) => {
       try {
-        const { accessToken, refreshToken, user } = await AuthenticationService.loginUser(
-          args.email,
-          args.password
-        );
+        const { accessToken, refreshToken, user } =
+          await AuthenticationService.loginUser(args.email, args.password);
         return {
           accessToken,
           refreshToken,
@@ -276,7 +278,7 @@ const resolvers = {
 
       return result;
     },
-  
+
     refreshToken: async (_: unknown, { refreshToken }: any) => {
       return await AuthorizationTokenService.refreshToken(refreshToken);
     },

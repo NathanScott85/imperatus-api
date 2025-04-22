@@ -1,22 +1,21 @@
-import { ApolloError, AuthenticationError } from 'apollo-server';
-import { prisma } from '../../server';
-import ProductsService from '../products';
-import { isAdminOrOwner } from '../roles/role-checks';
+import { ApolloError, AuthenticationError } from "apollo-server";
+import ProductsService from "../products";
+import { isAdminOrOwner } from "../roles/role-checks";
 
 const productResolvers = {
   Query: {
     getAllProducts: async (_: any, args: any) => {
-      const {
-        page = 1,
-        limit = 10,
-        search = '',
-        filters
-      } = args;
+      const { page = 1, limit = 10, search = "", filters } = args;
       return await ProductsService.getAllProducts(page, limit, search, filters);
     },
     getAllPreorders: async (_: any, args: any) => {
-      const { page = 1, limit = 10, search = '', filters } = args;
-      return await ProductsService.getAllPreorders(page, limit, search, filters);
+      const { page = 1, limit = 10, search = "", filters } = args;
+      return await ProductsService.getAllPreorders(
+        page,
+        limit,
+        search,
+        filters
+      );
     },
     getPreordersById: async (_: any, { id, page, limit, filters }: any) => {
       return await ProductsService.getPreordersById(id, page, limit, filters);
@@ -72,7 +71,7 @@ const productResolvers = {
           variantId,
           cardTypeId,
           setId,
-          rarityId,
+          rarityId
         );
 
         return newProduct;
@@ -104,7 +103,7 @@ const productResolvers = {
         categoryId: number;
         name?: string;
         price?: number;
-        productTypeId: number,
+        productTypeId: number;
         description?: string;
         img?: any;
         stockAmount?: number;
@@ -148,12 +147,11 @@ const productResolvers = {
         if (!updatedProduct) {
           throw new ApolloError("Product update failed. No product returned.");
         }
-        return updatedProduct
+        return updatedProduct;
       } catch (error) {
         console.error("Error in updateProduct resolver:", error);
         throw new ApolloError("Failed to update product", "UPDATE_FAILED");
       }
-
     },
     //   _: any,
     //   { id, name, brandId }: { id: number; name: string; brandId: number },
