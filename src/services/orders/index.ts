@@ -71,6 +71,21 @@ class OrderService {
           orderBy: { createdAt: "desc" },
           skip: offset,
           take: limit,
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    rarity: true,
+                    variant: true,
+                    cardType: true,
+                    set: true,
+                  },
+                },
+              },
+            },
+            discountCode: true,
+          },
         }),
         prisma.order.count({
           where: searchOnlyWhere,
@@ -268,7 +283,11 @@ class OrderService {
       const existingOrder = await tx.order.findUnique({
         where: { id },
         include: {
-          items: { include: { product: { select: { preorder: true } } } },
+          items: {
+            include: {
+              product: { select: { preorder: true } },
+            },
+          },
         },
       });
 
@@ -291,10 +310,7 @@ class OrderService {
         );
       }
 
-      const finalOrderItems = mergeOrderItems(
-        existingOrder.items,
-        validatedNewItems
-      );
+      const finalOrderItems = validatedNewItems;
 
       const { subtotal, vat, total, discountCodeId } =
         await calculateOrderTotals({
@@ -317,12 +333,24 @@ class OrderService {
         include: { discountCode: true },
       });
 
+      const vatStatusUpdate =
+        updatedFields.status === "cancelled" ||
+        updatedFields.status === "refunded"
+          ? { status: updatedFields.status }
+          : {};
+      const isVoided =
+        updatedFields.status === "cancelled" ||
+        updatedFields.status === "refunded";
+
       await VatService.updateVATRecord(tx, {
         orderId: id,
         orderNumber: updatedOrder.orderNumber,
-        vatAmount: vat.toNumber(),
-        subtotal: subtotal.toNumber(),
-        total: total.toNumber(),
+        vatAmount: isVoided ? 0 : vat.toNumber(),
+        subtotal: isVoided ? 0 : subtotal.toNumber(),
+        total: isVoided ? 0 : total.toNumber(),
+        ...(isVoided ? { status: updatedFields.status } : {}),
+        ...vatStatusUpdate,
+        status: updatedFields.status,
       });
 
       return updatedOrder;

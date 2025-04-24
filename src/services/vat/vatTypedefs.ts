@@ -8,6 +8,7 @@ const VatTypeDefs = gql`
     vatAmount: Float!
     subtotal: Float!
     total: Float!
+    status: String!
     createdAt: String!
   }
 

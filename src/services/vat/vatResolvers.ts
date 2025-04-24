@@ -7,7 +7,9 @@ const vatResolvers = {
     },
     getTotalVAT: async () => {
       const total = await VatService.getTotalVAT();
-      return { totalVAT: total?.toNumber?.() || 0 };
+      const totalVAT =
+        typeof total === "object" && "toNumber" in total ? total.toNumber() : 0;
+      return { totalVAT };
     },
   },
 };

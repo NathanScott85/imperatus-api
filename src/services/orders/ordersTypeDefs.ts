@@ -19,6 +19,14 @@ const ordersTypeDefs = gql`
     message: String!
   }
 
+  type OrderItem {
+    id: Int!
+    productId: Int!
+    quantity: Int!
+    price: Float!
+    product: Product!
+  }
+
   type Order {
     id: Int!
     firstOrder: Boolean!
@@ -39,6 +47,7 @@ const ordersTypeDefs = gql`
     discountCode: DiscountCode
     trackingNumber: String
     trackingProvider: String
+    items: [OrderItem!]!
   }
 
   input OrderItemInput {

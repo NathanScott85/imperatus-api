@@ -250,6 +250,7 @@ model VATRecord {
   vatAmount   Decimal  @db.Decimal(10, 2)
   subtotal    Decimal  @db.Decimal(10, 2)
   total       Decimal  @db.Decimal(10, 2)
+  status      String   @default("pending")
   createdAt   DateTime @default(now())
 
   order Order @relation(fields: [orderId], references: [id])
