@@ -109,7 +109,7 @@ export async function validateAndPrepareItem(
   if (!product.preorder) {
     if (!product.stock || product.stock.amount < item.quantity) {
       throw new Error(
-        `Insufficient stock for product ID ${item.productId}. Available: ${
+        `Insufficient stock for product. Available: ${
           product.stock?.amount ?? 0
         }`
       );
@@ -187,7 +187,10 @@ export async function handleOrderItemsUpdate(
   tx: Prisma.TransactionClient,
   orderId: number,
   existingItems: {
+    id: number;
     productId: number;
+    quantity: number;
+    product: { preorder: boolean | null };
   }[],
   newItems: {
     productId: number;
@@ -196,42 +199,61 @@ export async function handleOrderItemsUpdate(
     preorder: boolean;
   }[]
 ) {
-  const existingIds = new Set(existingItems.map((i) => i.productId));
-  const newIds = new Set(newItems.map((i) => i.productId));
-
-  const toRemove = [...existingIds].filter((id) => !newIds.has(id));
-
-  if (toRemove.length > 0) {
-    await tx.orderItem.deleteMany({
-      where: {
-        orderId,
-        productId: { in: toRemove },
-      },
-    });
-  }
-
-  await tx.orderItem.createMany({
-    data: newItems.map((item) => ({
-      orderId,
-      productId: item.productId,
-      quantity: item.quantity,
-      price: new Prisma.Decimal(item.price),
-    })),
-  });
-
-  await Promise.all(
-    newItems.map(async (item) => {
-      if (!item.preorder) {
-        await tx.stock.update({
-          where: { productId: item.productId },
-          data: {
-            amount: { decrement: item.quantity },
-            sold: { increment: item.quantity },
-          },
-        });
-      }
-    })
+  const existingMap = new Map(
+    existingItems.map((item) => [item.productId, item])
   );
+  const newMap = new Map(newItems.map((item) => [item.productId, item]));
+
+  const allProductIds = new Set([...existingMap.keys(), ...newMap.keys()]);
+
+  for (const productId of allProductIds) {
+    const existing = existingMap.get(productId);
+    const incoming = newMap.get(productId);
+
+    const prevQty = existing?.quantity || 0;
+    const newQty = incoming?.quantity || 0;
+    const delta = newQty - prevQty;
+
+    const isPreorder =
+      incoming?.preorder ?? existing?.product?.preorder ?? false;
+
+    // Adjust stock
+    if (delta !== 0) {
+      await tx.stock.update({
+        where: { productId },
+        data: {
+          amount: { increment: -delta },
+          sold: { increment: delta },
+        },
+      });
+    }
+
+    if (!existing && incoming) {
+      // Create new item
+      await tx.orderItem.create({
+        data: {
+          orderId,
+          productId: incoming.productId,
+          quantity: incoming.quantity,
+          price: new Prisma.Decimal(incoming.price),
+        },
+      });
+    } else if (existing && incoming) {
+      // Update quantity and price if changed
+      await tx.orderItem.update({
+        where: { id: existing.id },
+        data: {
+          quantity: incoming.quantity,
+          price: new Prisma.Decimal(incoming.price),
+        },
+      });
+    } else if (existing && !incoming) {
+      // Deleted item: remove from order
+      await tx.orderItem.delete({
+        where: { id: existing.id },
+      });
+    }
+  }
 }
 
 export async function calculateOrderTotals({

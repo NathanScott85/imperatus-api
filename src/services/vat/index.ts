@@ -57,12 +57,14 @@ class VatService {
       vatAmount,
       subtotal,
       total,
+      status,
     }: {
       orderId: number;
       orderNumber: string;
       vatAmount: number;
       subtotal: number;
       total: number;
+      status?: string;
     }
   ) {
     const existing = await tx.vATRecord.findFirst({
@@ -70,14 +72,17 @@ class VatService {
       select: { id: true },
     });
 
+    const data = {
+      vatAmount: new Prisma.Decimal(vatAmount),
+      subtotal: new Prisma.Decimal(subtotal),
+      total: new Prisma.Decimal(total),
+      ...(status && { status }),
+    };
+
     if (existing) {
       return tx.vATRecord.update({
         where: { id: existing.id },
-        data: {
-          vatAmount: new Prisma.Decimal(vatAmount),
-          subtotal: new Prisma.Decimal(subtotal),
-          total: new Prisma.Decimal(total),
-        },
+        data,
       });
     }
 
@@ -85,9 +90,7 @@ class VatService {
       data: {
         orderId,
         orderNumber,
-        vatAmount: new Prisma.Decimal(vatAmount),
-        subtotal: new Prisma.Decimal(subtotal),
-        total: new Prisma.Decimal(total),
+        ...data,
       },
     });
   }
@@ -97,9 +100,11 @@ class VatService {
       _sum: {
         vatAmount: true,
       },
+      where: {
+        status: { notIn: ["cancelled", "refunded"] },
+      },
     });
-
-    return result._sum.vatAmount;
+    return result._sum.vatAmount ?? 0;
   }
 }
 
