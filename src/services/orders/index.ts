@@ -61,6 +61,12 @@ class OrderService {
                   mode: Prisma.QueryMode.insensitive,
                 },
               },
+              {
+                orderNumber: {
+                  contains: search,
+                  mode: Prisma.QueryMode.insensitive,
+                },
+              },
             ],
           }
         : undefined;

@@ -33,6 +33,7 @@ const discountCodeResolvers = {
           type: "percentage" | "fixed";
           value: number;
           expiresAt?: string;
+          isAffiliate?: boolean;
           active?: boolean;
         };
       }
@@ -56,6 +57,7 @@ const discountCodeResolvers = {
         type,
         value,
         expiresAt,
+        isAffiliate,
         active,
       }: {
         id: number;
@@ -64,6 +66,7 @@ const discountCodeResolvers = {
         type?: "percentage" | "fixed";
         value?: number;
         expiresAt?: Date;
+        isAffiliate?: boolean;
         active?: boolean;
       }
     ) => {
@@ -73,6 +76,7 @@ const discountCodeResolvers = {
         type,
         value,
         expiresAt: expiresAt ? moment(expiresAt).toDate() : undefined,
+        isAffiliate,
         active,
       });
     },

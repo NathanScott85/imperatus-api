@@ -218,11 +218,11 @@ export async function handleOrderItemsUpdate(
       incoming?.preorder ?? existing?.product?.preorder ?? false;
 
     // Adjust stock
-    if (!isPreorder && delta !== 0) {
+    if (delta !== 0) {
       await tx.stock.update({
         where: { productId },
         data: {
-          amount: { increment: -delta }, // +delta reduces, -delta adds back
+          amount: { increment: -delta },
           sold: { increment: delta },
         },
       });

@@ -7,6 +7,7 @@ const discountCodesTypeDefs = gql`
     description: String
     type: String!
     value: Float!
+    isAffiliate: Boolean!
     active: Boolean!
     expiresAt: String
     createdAt: String!
@@ -18,6 +19,7 @@ const discountCodesTypeDefs = gql`
     description: String
     type: String!
     value: Float!
+    isAffiliate: Boolean
     active: Boolean
     expiresAt: String
   }
@@ -27,6 +29,7 @@ const discountCodesTypeDefs = gql`
     code: String
     description: String
     type: String
+    isAffiliate: Boolean
     value: Float
     expiresAt: String
     active: Boolean

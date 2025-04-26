@@ -276,6 +276,7 @@ model DiscountCode {
   code        String    @unique
   description String?
   type        String
+  isAffiliate Boolean   @default(false)
   value       Decimal   @db.Decimal(10, 2)
   active      Boolean   @default(true)
   expiresAt   DateTime?

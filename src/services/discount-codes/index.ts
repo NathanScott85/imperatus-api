@@ -21,6 +21,7 @@ class DiscountCodeService {
     type,
     value,
     expiresAt,
+    isAffiliate = false,
     active = true,
   }: {
     code: string;
@@ -28,6 +29,7 @@ class DiscountCodeService {
     type: "percentage" | "fixed";
     value: number;
     expiresAt?: Date;
+    isAffiliate?: boolean;
     active?: boolean;
   }) {
     return prisma.discountCode.create({
@@ -36,6 +38,7 @@ class DiscountCodeService {
         description,
         type,
         value,
+        isAffiliate,
         active,
         expiresAt: expiresAt ? moment(expiresAt).toDate() : undefined,
       },
@@ -102,6 +105,7 @@ class DiscountCodeService {
       value?: number;
       expiresAt?: string | Date;
       active?: boolean;
+      isAffiliate?: boolean;
     }
   ): Promise<any> {
     try {
@@ -111,7 +115,8 @@ class DiscountCodeService {
         throw new Error("Discount code not found");
       }
 
-      const { code, description, type, value, expiresAt, active } = data;
+      const { code, description, type, value, expiresAt, active, isAffiliate } =
+        data;
 
       const updated = await prisma.discountCode.update({
         where: { id },
@@ -121,6 +126,7 @@ class DiscountCodeService {
           type,
           value,
           active,
+          isAffiliate,
           expiresAt: expiresAt ? moment(expiresAt).toDate() : undefined,
         },
       });
