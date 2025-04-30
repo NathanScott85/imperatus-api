@@ -94,6 +94,12 @@ const ordersTypeDefs = gql`
     getAllStatus: [Status!]!
     getAllOrderStatuses(orderId: Int!): [OrderStatus!]!
     getFirstOrder(email: String!): Order
+    getUserOrders(
+      email: String
+      userId: Int
+      page: Int
+      limit: Int
+    ): PaginatedOrders!
   }
 
   type Mutation {

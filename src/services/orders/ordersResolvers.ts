@@ -1,4 +1,5 @@
 import OrderService from "../../services/orders";
+import { isAdminOrOwner } from "../roles/role-checks";
 
 const ordersResolvers = {
   Query: {
@@ -8,8 +9,13 @@ const ordersResolvers = {
         page,
         limit,
         search,
-      }: { page?: number; limit?: number; search?: string }
+      }: { page?: number; limit?: number; search?: string },
+      ctx: { user?: { id: string; roles: string[] } }
     ) => {
+      if (!ctx?.user?.roles || !isAdminOrOwner(ctx.user)) {
+        throw new Error("Unauthorized");
+      }
+
       return OrderService.getAllOrders(page, limit, search);
     },
     getAllStatus: async () => {
@@ -18,11 +24,33 @@ const ordersResolvers = {
     getAllOrderStatuses: async (_: any, { orderId }: { orderId: number }) => {
       return OrderService.getAllOrderStatuses(orderId);
     },
-    getFirstOrder: async (_: any, { email }: { email: string }) => {
-      return OrderService.getFirstOrder(email);
+    getUserOrders: async (
+      _: any,
+      {
+        email,
+        userId,
+        page,
+        limit,
+      }: { email: string; userId: number; page: number; limit: number },
+      context: any
+    ) => {
+      if (!context.user) {
+        throw new Error("Authentication required");
+      }
+      const requestingUserEmail = context.user.email?.toLowerCase();
+      const requestingUserId = context.user.id;
+
+      if (email && email.toLowerCase() !== requestingUserEmail) {
+        throw new Error("Unauthorized access");
+      }
+
+      if (userId && userId !== requestingUserId) {
+        throw new Error("Unauthorized access");
+      }
+
+      return OrderService.getOrdersByUser(email, userId, page, limit);
     },
   },
-
   Mutation: {
     createOrder: async (
       _: any,

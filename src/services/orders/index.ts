@@ -116,6 +116,59 @@ class OrderService {
     });
   }
 
+  async getOrdersByUser(
+    email?: string,
+    userId?: number,
+    page: number = 1,
+    limit: number = 10
+  ) {
+    const whereClause: any = {};
+
+    if (email) {
+      whereClause.email = email.toLowerCase();
+    }
+    if (userId) {
+      whereClause.userId = userId;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [orders, totalCount] = await Promise.all([
+      prisma.order.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          items: {
+            include: {
+              product: {
+                include: {
+                  rarity: true,
+                  set: true,
+                  cardType: true,
+                  variant: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.order.count({
+        where: whereClause,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      orders,
+      totalCount,
+      totalPages,
+      currentPage: page,
+    };
+  }
+
   async getFirstOrderByUserId(userId: number) {
     return prisma.order.findFirst({
       where: { userId },
