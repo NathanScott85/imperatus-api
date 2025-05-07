@@ -153,33 +153,6 @@ const productResolvers = {
         throw new ApolloError("Failed to update product", "UPDATE_FAILED");
       }
     },
-    //   _: any,
-    //   { id, name, brandId }: { id: number; name: string; brandId: number },
-    //   { user }: any
-    // ) => {
-    //   if ( !user ) {
-    //     throw new AuthenticationError( "You must be logged in" );
-    //   }
-
-    //   if ( !isAdminOrOwner( user ) ) {
-    //     throw new AuthenticationError( "Permission denied" );
-    //   }
-
-    //   try {
-    //     const result = await ProductsService.updateCardType( id, name, Number( brandId ) );
-
-    //     if ( !result ) {
-    //       console.error( "Result is null or undefined, throwing ApolloError." );
-    //       throw new ApolloError( "Failed to update card type - no result returned" );
-    //     }
-
-    //     return result;
-    //   } catch ( error ) {
-    //     console.error( "Error caught in updateCardType resolver:", error );
-    //     throw new ApolloError( "Failed to update card type", "UPDATE_FAILED" );
-    //   }
-    // },
-
     deleteProduct: async (
       _: any,
       args: { id: string },
