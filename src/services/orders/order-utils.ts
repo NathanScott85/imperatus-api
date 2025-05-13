@@ -23,6 +23,7 @@ export async function calculateDiscount({
     const discount = await DiscountCodeService.getDiscountCodeByCode(
       discountCode
     );
+
     if (
       discount &&
       discount.active &&

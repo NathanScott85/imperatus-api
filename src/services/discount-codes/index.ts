@@ -4,8 +4,13 @@ import moment from "moment";
 
 class DiscountCodeService {
   async getDiscountCodeByCode(code: string) {
-    return prisma.discountCode.findUnique({
-      where: { code },
+    return prisma.discountCode.findFirst({
+      where: {
+        code: {
+          equals: code,
+          mode: "insensitive",
+        },
+      },
     });
   }
 

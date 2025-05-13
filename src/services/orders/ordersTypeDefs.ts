@@ -91,9 +91,11 @@ const ordersTypeDefs = gql`
 
   type Query {
     getAllOrders(page: Int, limit: Int, search: String): PaginatedOrders!
+    getOrder(id: Int!): Order!
     getAllStatus: [Status!]!
     getAllOrderStatuses(orderId: Int!): [OrderStatus!]!
     getFirstOrder(email: String!): Order
+    isFirstOrder(email: String!): Boolean!
     getUserOrders(
       email: String
       userId: Int
