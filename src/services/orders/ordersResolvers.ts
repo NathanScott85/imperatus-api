@@ -24,6 +24,18 @@ const ordersResolvers = {
     getAllOrderStatuses: async (_: any, { orderId }: { orderId: number }) => {
       return OrderService.getAllOrderStatuses(orderId);
     },
+    getOrder: async (
+      _: any,
+      { id }: { id: number },
+      ctx: { user?: { id: string; roles: string[] } }
+    ) => {
+      if (!ctx?.user) throw new Error("Authentication required");
+
+      return await OrderService.getOrderById(id, {
+        ...ctx.user,
+        id: Number(ctx.user.id),
+      });
+    },
     getUserOrders: async (
       _: any,
       {
@@ -49,6 +61,9 @@ const ordersResolvers = {
       }
 
       return OrderService.getOrdersByUser(email, userId, page, limit);
+    },
+    isFirstOrder: async (_: any, { email }: { email: string }) => {
+      return OrderService.isFirstOrder(email);
     },
   },
   Mutation: {

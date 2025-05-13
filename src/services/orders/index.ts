@@ -169,6 +169,35 @@ class OrderService {
     };
   }
 
+  async getOrderById(id: number, user: { id: number; roles: string[] }) {
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        discountCode: true,
+        items: {
+          include: {
+            product: {
+              include: { img: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    const isOwner = order.userId !== null && order.userId === Number(user.id);
+    const isAdmin = user.roles.includes("admin");
+
+    if (!isOwner && !isAdmin) {
+      throw new Error("Unauthorized");
+    }
+
+    return order;
+  }
+
   async getFirstOrderByUserId(userId: number) {
     return prisma.order.findFirst({
       where: { userId },
@@ -179,6 +208,13 @@ class OrderService {
     return prisma.order.findFirst({
       where: { email },
     });
+  }
+
+  async isFirstOrder(email: string): Promise<boolean> {
+    const count = await prisma.order.count({
+      where: { email: email.toLowerCase() },
+    });
+    return count === 0;
   }
 
   async getAllOrderStatuses(orderId: number) {

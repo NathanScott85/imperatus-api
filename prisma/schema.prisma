@@ -31,7 +31,7 @@ model CarouselPages {
 
 model CarouselPage {
   id             String         @id @default(cuid())
-  title          String
+  title          String?
   description    String?
   buttonText     String?
   imgId          Int?           @unique
