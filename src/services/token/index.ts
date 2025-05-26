@@ -19,14 +19,15 @@ class AuthorizationTokenService {
       { id: user.id, email: user.email, roles: user.roles },
       access,
       {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
+        expiresIn: process.env.ACCESS_TOKEN_EXPIRY as `${number}${"m" | "d"}`,
       }
     );
+
     const refreshToken = jwt.sign(
       { id: user.id, email: user.email, roles: user.roles },
       refresh,
       {
-        expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+        expiresIn: process.env.REFRESH_TOKEN_EXPIRY as `${number}${"m" | "d"}`,
       }
     );
     return {

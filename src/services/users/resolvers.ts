@@ -21,6 +21,7 @@ import cardTypeResolvers from "../card-types/cardTypeResolvers";
 import vatResolvers from "../vat/vatResolvers";
 import ordersResolvers from "../orders/ordersResolvers";
 import discountCodeResolvers from "../discount-codes/discountCodeResolvers";
+import paymentResolvers from "../payments/paymentResolvers";
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -94,6 +95,7 @@ const resolvers = {
     ...cardTypeResolvers.Mutation,
     ...discountCodeResolvers.Mutation,
     ...ordersResolvers.Mutation,
+    ...paymentResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {
