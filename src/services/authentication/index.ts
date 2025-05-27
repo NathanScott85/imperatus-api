@@ -5,12 +5,11 @@ import SecurityService from "../security";
 import UserService from "../users";
 import AuthorizationTokenService from "../token";
 import EmailService from "../email";
-import RoleService from "../roles"; // Import RoleService
 import { createHash } from "crypto";
 import moment from "moment";
 
 interface JwtPayload {
-  id: number; // Ensure this matches the type of User.id in Prisma schema
+  id: number;
   email: string;
   roles: string[];
 }
@@ -19,64 +18,62 @@ class AuthenticationService {
   public async loginUser(email: string, password: string) {
     const user = await prisma.user.findUnique({
       where: { email },
-      include: {
+      select: {
+        email: true,
+        emailVerified: true,
+        fullname: true,
+        address: true,
+        postcode: true,
+        city: true,
+        dob: true,
+        phone: true,
         userRoles: {
-          include: {
-            role: true,
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
+        id: true,
+        password: true,
       },
     });
-
-    if (
-      !user ||
-      !(await SecurityService.comparePassword(password, user.password))
-    ) {
+  
+    if (!user) {
       throw new Error("Invalid email or password");
     }
-
-    // Format the dob before returning
-    const formattedDob = user.dob
-      ? moment(user.dob).format("YYYY-MM-DD")
-      : null;
-
-    // Retrieve user's roles
-    const rolesService = await RoleService.getUserRoles(user.id);
-
-    // Map roles to extract the role names
-    const roles = rolesService.map((roleObject) => roleObject.role.name);
-
-    // Generate JWT token with user's information
-    const { accessToken, refreshToken } =
-      AuthorizationTokenService.generateTokens({
-        id: user.id,
-        email: user.email,
-        roles,
-      });
-
-    // Store refresh token in the database
+  
+    const isPasswordValid = await SecurityService.comparePassword(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error("Invalid email or password");
+    }
+  
+    const roles = user.userRoles.map((roleObject) => roleObject.role.name);
+    const { accessToken, refreshToken } = AuthorizationTokenService.generateTokens({
+      id: user.id,
+      email: user.email,
+      roles,
+    });
+  
     await prisma.user.update({
-      where: {
-        id: user.id,
-      },
+      where: { id: user.id },
       data: {
         refreshToken: refreshToken,
-        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
-
-    // Return the token and user data with formatted dob
+  
+    const { password: _, ...userWithoutPassword } = user;
+  
     return {
-      refreshToken,
       accessToken,
-      user: {
-        ...user,
-        dob: formattedDob, // Use the formatted date of birth
-        roles,
-      },
+      refreshToken,
+      user: userWithoutPassword,
     };
   }
-
+  
   public async logoutUser(refreshToken: string) {
     if (!refreshToken) {
       throw new AuthenticationError("Refresh token is missing.");
@@ -121,7 +118,6 @@ class AuthenticationService {
     city: string;
     postcode: string;
   }) {
-    // Validate input
     const { fullname, email, password, dob, phone, address, city, postcode } =
       input;
     if (
@@ -137,7 +133,6 @@ class AuthenticationService {
       throw new UserInputError("All fields are required.");
     }
 
-    // Check if the user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -145,22 +140,20 @@ class AuthenticationService {
       throw new UserInputError("Email is already in use.");
     }
 
-    // Hash the password
     const hashedPassword = await SecurityService.hashPassword(password);
 
-    // Create the new user in the database
     const user = await prisma.user.create({
       data: {
         fullname,
         email,
         password: hashedPassword,
-        dob: new Date(dob), // Ensure dob is a Date type
+        dob: new Date(dob),
         phone,
         address,
         city,
         postcode,
         userRoles: {
-          create: [{ role: { connect: { name: "User" } } }], // Assign default role
+          create: [{ role: { connect: { name: "User" } } }],
         },
       },
       include: {
@@ -172,10 +165,8 @@ class AuthenticationService {
       },
     });
 
-    // Extract roles
     const roles = user.userRoles.map((userRole: any) => userRole.role.name);
 
-    // Generate JWT token
     const token = AuthorizationTokenService.generateTokens({
       id: user.id,
       email: user.email,
@@ -186,45 +177,39 @@ class AuthenticationService {
   }
 
   public async requestPasswordReset(email: string) {
+  
     const user = await UserService.findUserByEmail(email);
     if (!user) {
-      // Generic error to prevent information leakage
       throw new Error(
         "If the email is associated with an account, you will receive a reset link."
       );
     }
-
-    const { resetToken, resetTokenExpiry } =
-      AuthorizationTokenService.generateResetToken();
-
-    // Hash the reset token before storing it
+  
+    const { resetToken, resetTokenExpiry } = AuthorizationTokenService.generateResetToken();
+  
     const hashedResetToken = createHash("sha256")
       .update(resetToken)
       .digest("hex");
-
-    // Store the hashed token and expiry in the database
+  
     await prisma.user.update({
       where: { email },
       data: { resetToken: hashedResetToken, resetTokenExpiry },
     });
-
-    // Send the email with the reset link
-    const resetLink = `${
-      process.env.FRONTEND_URL
-    }/account/reset-password?token=${resetToken}&email=${encodeURIComponent(
-      email
-    )}`;
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER || "no-reply@imperatus.co.uk",
+  
+    const resetLink = `${process.env.FRONTEND_URL}/account/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+  
+    const subject = "Password Reset";
+    const templatePath = "reset-password.hbs";
+    const context = { resetLink };
+  
+    await EmailService.sendMail({
+      from: process.env.EMAIL_FROM!,
       to: user.email,
-      subject: "Password Reset",
-      text: `Please reset your password by clicking the following link: ${resetLink}`,
-      html: `<p>Please reset your password by clicking the following link: <a href="${resetLink}">Reset Password</a></p>`,
-    };
-
-    await EmailService.sendMail(mailOptions);
-
+      subject,
+      context,
+      templatePath,
+    });
+  
     return { message: "Password reset token sent to email" };
   }
 
@@ -233,7 +218,6 @@ class AuthenticationService {
     newPassword: string,
     email: string
   ) {
-    // Hash the incoming token for comparison
     const hashedResetToken = createHash("sha256").update(token).digest("hex");
 
     const user = await prisma.user.findFirst({
@@ -241,20 +225,17 @@ class AuthenticationService {
         email,
         resetToken: hashedResetToken,
         resetTokenExpiry: {
-          gte: new Date(), // Ensure token is not expired
+          gte: new Date(),
         },
       },
     });
 
     if (!user) {
-      // Invalid or expired token error
       throw new Error("Invalid or expired reset token.");
     }
 
-    // Hash the new password
     const hashedPassword = await SecurityService.hashPassword(newPassword);
 
-    // Update user's password and clear token fields
     await prisma.user.update({
       where: { id: user.id },
       data: {

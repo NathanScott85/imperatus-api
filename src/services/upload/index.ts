@@ -20,7 +20,7 @@ export class UploadService {
     contentType: string;
   }> {
     return new Promise((resolve, reject) => {
-      upload.single("file")(req, res, async (err: any) => {
+      upload.single("file")(req as any, res as any, async (err: any) => {
         if (err) {
           return reject(err);
         }

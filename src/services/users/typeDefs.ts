@@ -1,6 +1,19 @@
 import { gql } from "apollo-server";
 import productTypeDefs from "../products/productTypeDefs";
 import categoryTypeDefs from "../categories/categoriesTypeDefs";
+import carouselTypeDefs from "../carousel/carouselTypedefs";
+import promotionTypeDefs from "../promotions/promotionsTypeDefs";
+import productSetsTypeDefs from "../product-sets/productSetTypeDefs";
+import brandsTypeDefs from "../brands/brandsTypedefs";
+import productTypesTypeDefs from "../product-type/productTypeTypeDefs";
+import rarityTypeDefs from "../card-rarity/cardRarityTypeDefs";
+import roleTypeDefs from "../roles/roleTypeDefs";
+import variantTypeDefs from "../variants/variantsTypedefs";
+import cardTypeDefs from "../card-types/cardTypeTypeDefs";
+import ordersTypeDefs from "../orders/ordersTypeDefs";
+import discountCodesTypeDefs from "../discount-codes/discountcodeTypeDefs";
+import vatTypeDefs from "../vat/vatTypedefs";
+import paymentTypeDefs from "../payments/paymentTypedefs";
 
 const typeDefs = gql`
   type User {
@@ -42,18 +55,6 @@ const typeDefs = gql`
   type StoreCreditHistoryResponse {
     transactions: [StoreCreditTransaction!]!
     totalCount: Int!
-  }
-
-  type Role {
-    id: Int!
-    name: String
-    users: [User!]!
-  }
-
-  type UserRole {
-    id: Int!
-    user: User!
-    role: Role!
   }
 
   type AuthPayload {
@@ -135,7 +136,6 @@ const typeDefs = gql`
       newPassword: String!
       email: String!
     ): ResetResponse!
-    updateUserRoles(userId: Int!, roles: [String!]!): User!
     updateUser(id: Int!, fullname: String, email: String, dob: String): User
     updateUserAddress(
       id: Int!
@@ -145,19 +145,33 @@ const typeDefs = gql`
       postcode: String
     ): User
     sendVerificationEmail(userId: Int!): Message!
+    resendVerificationEmail(userId: Int!): Message
     verifyEmail(token: String!): Message!
     deleteUser(id: Int!): Message!
     refreshToken(refreshToken: String!): AuthPayload!
-    updateUserRole(id: Int!, admin: Boolean!): User!
     logoutUser: Message!
     registerUser(input: RegisterInput!): User!
-    createRole(name: String!): Role!
-    deleteRole(name: String!): Message!
-    assignRoleToUser(userId: Int!, roleName: String!): Message!
     updateUserStoreCredit(id: Int!, amount: Float!): User!
   }
 `;
 
-const combinedTypeDefs = [typeDefs, productTypeDefs, categoryTypeDefs];
+const combinedTypeDefs = [
+  typeDefs,
+  productTypeDefs,
+  categoryTypeDefs,
+  carouselTypeDefs,
+  promotionTypeDefs,
+  productSetsTypeDefs,
+  brandsTypeDefs,
+  productTypesTypeDefs,
+  rarityTypeDefs,
+  roleTypeDefs,
+  variantTypeDefs,
+  cardTypeDefs,
+  ordersTypeDefs,
+  discountCodesTypeDefs,
+  vatTypeDefs,
+  paymentTypeDefs,
+];
 
 export default combinedTypeDefs;

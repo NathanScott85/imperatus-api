@@ -1,23 +1,27 @@
-import { Prisma, ProductType } from "@prisma/client";
 import { prisma } from "../../server";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import {
-  ApolloError,
-  AuthenticationError,
-  UserInputError,
-} from "apollo-server";
+import { AuthenticationError, UserInputError } from "apollo-server";
 import UserService from "../users";
 import AuthenticationService from "../authentication";
-import RoleService from "../roles"; // Import RoleService
 import AuthorizationTokenService from "../token";
-import {
-  isOwner,
-} from "../roles/role-checks";
+import { isOwner } from "../roles/role-checks";
 import moment from "moment-timezone";
 import { GraphQLUpload } from "graphql-upload-ts";
 import categoriesResolvers from "../categories/categoriesResolvers";
 import productResolvers from "../products/productsResolvers";
 import userResolvers from "./userResolvers";
+import carouselResolvers from "../carousel/carouselResolvers";
+import promotionResolvers from "../promotions/promotionsResolvers";
+import productSetResolvers from "../product-sets/productSetResolvers";
+import brandsResolvers from "../brands/brandsResolvers";
+import productTypesResolvers from "../product-type/productTypeResolvers";
+import rarityResolvers from "../card-rarity/cardRarityResolvers";
+import roleResolvers from "../roles/rolesResolvers";
+import variantResolvers from "../variants/variantsResolvers";
+import cardTypeResolvers from "../card-types/cardTypeResolvers";
+import vatResolvers from "../vat/vatResolvers";
+import ordersResolvers from "../orders/ordersResolvers";
+import discountCodeResolvers from "../discount-codes/discountCodeResolvers";
+import paymentResolvers from "../payments/paymentResolvers";
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -25,6 +29,18 @@ const resolvers = {
     ...categoriesResolvers.Query,
     ...productResolvers.Query,
     ...userResolvers.Query,
+    ...carouselResolvers.Query,
+    ...promotionResolvers.Query,
+    ...productSetResolvers.Query,
+    ...brandsResolvers.Query,
+    ...productTypesResolvers.Query,
+    ...rarityResolvers.Query,
+    ...roleResolvers.Query,
+    ...variantResolvers.Query,
+    ...cardTypeResolvers.Query,
+    ...vatResolvers.Query,
+    ...discountCodeResolvers.Query,
+    ...ordersResolvers.Query,
     getVerificationStatus: async (_: any, { userId }: any) => {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
@@ -68,7 +84,18 @@ const resolvers = {
     ...categoriesResolvers.Mutation,
     ...productResolvers.Mutation,
     ...userResolvers.Mutation,
-
+    ...carouselResolvers.Mutation,
+    ...promotionResolvers.Mutation,
+    ...productSetResolvers.Mutation,
+    ...brandsResolvers.Mutation,
+    ...productTypesResolvers.Mutation,
+    ...rarityResolvers.Mutation,
+    ...roleResolvers.Mutation,
+    ...variantResolvers.Mutation,
+    ...cardTypeResolvers.Mutation,
+    ...discountCodeResolvers.Mutation,
+    ...ordersResolvers.Mutation,
+    ...paymentResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {
@@ -112,15 +139,14 @@ const resolvers = {
         throw new Error(`Failed to change password: ${errorMessage}`);
       }
     },
+
     requestPasswordReset: async (_: any, { email }: { email: string }) => {
-      // Ensure the provided email exists in the database
       const dbUser = await UserService.findUserByEmail(email);
       if (!dbUser) {
         throw new UserInputError("User with this email does not exist.");
       }
 
       try {
-        // Proceed to request a password reset
         const response = await AuthenticationService.requestPasswordReset(
           email
         );
@@ -169,38 +195,18 @@ const resolvers = {
         };
       }
     },
-
     verifyEmail: async (
       _: unknown,
       args: { token: string }
     ): Promise<{ message: string }> => {
       try {
-        const user = await prisma.user.findFirst({
-          where: {
-            verificationToken: args.token,
-            verificationTokenExpiry: {
-              gte: new Date(),
-            },
-          },
-        });
-
-        if (!user) {
-          throw new Error("Invalid or expired verification token");
-        }
-
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            verificationToken: null,
-            verificationTokenExpiry: null,
-            emailVerified: true,
-          },
-        });
-
-        return { message: "Email verified successfully." };
-      } catch (error) {
+        const result = await UserService.verifyEmail(args.token);
+        return result;
+      } catch (error: any) {
         console.error("Verification failed:", error);
-        return { message: "Failed to verify email. Please try again later." };
+        throw new Error(
+          error.message || "Failed to verify email. Please try again later."
+        );
       }
     },
 
@@ -209,7 +215,7 @@ const resolvers = {
         const user = await UserService.getUserById(userId);
 
         if (!user || !user.email) {
-          console.error("User not found or email not provided");
+          console.error("Resolver: User not found or email missing");
           return { message: "User not found or email not provided" };
         }
 
@@ -224,10 +230,24 @@ const resolvers = {
 
         return { message: "Verification email sent successfully." };
       } catch (error) {
-        console.error("Error in sendVerificationEmail:", error);
+        console.error("Resolver: Error in sendVerificationEmail:", error);
         return {
+          success: false,
           message: "An error occurred while sending the verification email.",
         };
+      }
+    },
+
+    async resendVerificationEmail(_: any, { userId }: { userId: number }) {
+      try {
+        const result = await UserService.resendVerificationEmail(userId);
+        return result;
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          return { message: error.message || "An error occurred" };
+        } else {
+          return { message: "An unknown error occurred" };
+        }
       }
     },
 
@@ -236,15 +256,13 @@ const resolvers = {
       args: { email: string; password: string }
     ) => {
       try {
-        const { accessToken, user } = await AuthenticationService.loginUser(
-          args.email,
-          args.password
-        );
-
-        const { refreshToken } =
-          AuthorizationTokenService.refreshToken(accessToken);
-
-        return { accessToken, user, refreshToken };
+        const { accessToken, refreshToken, user } =
+          await AuthenticationService.loginUser(args.email, args.password);
+        return {
+          accessToken,
+          refreshToken,
+          user,
+        };
       } catch (error) {
         console.error(error, "error");
         throw new AuthenticationError("Invalid email or password");
@@ -262,44 +280,9 @@ const resolvers = {
 
       return result;
     },
+
     refreshToken: async (_: unknown, { refreshToken }: any) => {
       return await AuthorizationTokenService.refreshToken(refreshToken);
-    },
-
-    createRole: async (_: unknown, args: { name: string }, { user }: any) => {
-      if (!user || !isOwner(user))
-        throw new AuthenticationError("Permission denied");
-      return await RoleService.createRole(args.name);
-    },
-
-    deleteRole: async (_: unknown, args: { name: string }, { user }: any) => {
-      if (!user || !isOwner(user))
-        throw new AuthenticationError("Permission denied");
-      await RoleService.deleteRole(args.name);
-      return { message: "Role deleted successfully" };
-    },
-
-    updateUserRoles: async (
-      _: unknown,
-      args: { userId: number; roles: string[] },
-      { user }: any
-    ) => {
-      if (!user || !isOwner(user))
-        throw new AuthenticationError(
-          "You do not have permission to update roles"
-        );
-      return await UserService.updateUserRoles(args.userId, args.roles);
-    },
-
-    assignRoleToUser: async (
-      _: unknown,
-      { userId, roleName }: { userId: number; roleName: string },
-      { user }: any
-    ) => {
-      if (!user || !isOwner(user)) {
-        throw new AuthenticationError("Permission denied");
-      }
-      return await RoleService.assignRoleToUser(userId, roleName);
     },
 
     updateUserStoreCredit: async (
@@ -313,7 +296,6 @@ const resolvers = {
         );
       }
 
-      // Get current user
       const existingUser = await prisma.user.findUnique({
         where: { id },
       });
@@ -322,14 +304,11 @@ const resolvers = {
         throw new Error("User not found.");
       }
 
-      // Calculate the new balance
       const newBalance = amount;
 
-      // Log the transaction
       const transactionType =
         newBalance > existingUser.storeCredit ? "credit" : "subtraction";
 
-      // Get the current date and time as a DateTime object
       const currentDateTime = moment().tz("Europe/London").toDate();
 
       await prisma.storeCreditTransaction.create({
@@ -338,12 +317,11 @@ const resolvers = {
           type: transactionType,
           amount: Math.abs(amount - existingUser.storeCredit),
           balanceAfter: newBalance,
-          date: currentDateTime, // Use the full DateTime object here
-          time: moment(currentDateTime).format("HH:mm:ss"), // Still storing time separately if required
+          date: currentDateTime,
+          time: moment(currentDateTime).format("HH:mm:ss"),
         },
       });
 
-      // Update the user's store credit
       const updatedUser = await prisma.user.update({
         where: { id },
         data: { storeCredit: newBalance },

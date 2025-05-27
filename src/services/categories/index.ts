@@ -1,48 +1,158 @@
 import { Prisma } from "@prisma/client";
 import { ApolloError } from "apollo-server";
 import UploadService from "../upload";
+import BrandsService from '../brands';
+import ProductSetsService from "../product-sets";
+import RarityService from "../card-rarity";
 import { prisma } from "../../server";
+import { formatSlug } from "../../lib";
 
 class CategoriesService {
-  public async getAllCategories(page: number = 1, limit: number = 10, search: string = "") {
+  public async getAllCategories(
+    page: number = 1,
+    limit: number = 10,
+    search: string = "",
+    filters: {
+      priceMin?: number;
+      priceMax?: number;
+      preorder?: boolean;
+      productTypeId?: number;
+      setId?: number | number[];
+      brandId?: number | number[];
+      variantId?: number | number[];
+      stockMin?: number;
+      stockMax?: number;
+      // rarityIds?: number[];
+    } = {}
+  ) {
     const offset = (page - 1) * limit;
-    const [categories, totalCount] = await Promise.all([
-      prisma.category.findMany({
-        where: search
+    const whereClause: Prisma.CategoryWhereInput = {
+      AND: [
+        search ? { name: { contains: search, mode: "insensitive" } } : {},
+        filters.priceMin !== undefined || filters.priceMax !== undefined
           ? {
-            name: {
-              contains: search,
-              mode: "insensitive",
+            products: {
+              some: {
+                AND: [
+                  filters.priceMin !== undefined ? { price: { gte: filters.priceMin } } : {},
+                  filters.priceMax !== undefined ? { price: { lte: filters.priceMax } } : {},
+                ],
+              },
             },
           }
-          : undefined,
+          : {},
+        filters.stockMin !== undefined || filters.stockMax !== undefined
+          ? {
+            products: {
+              some: {
+                stock: {
+                  AND: [
+                    filters.stockMin !== undefined ? { amount: { gte: filters.stockMin } } : {},
+                    filters.stockMax !== undefined ? { amount: { lte: filters.stockMax } } : {},
+                  ],
+                },
+              },
+            },
+          }
+          : {},
+        filters.brandId !== undefined
+          ? {
+            products: {
+              some: {
+                brandId: { in: Array.isArray(filters.brandId) ? filters.brandId : [filters.brandId] },
+              },
+            },
+          }
+          : {},
+        filters.preorder !== undefined
+          ? {
+            products: {
+              some: {
+                preorder: filters.preorder,
+              },
+            },
+          }
+          : {},
+        filters.setId !== undefined
+          ? {
+            products: {
+              some: {
+                setId: { in: Array.isArray(filters.setId) ? filters.setId : [filters.setId] },
+              },
+            },
+          }
+          : {},
+        filters.variantId !== undefined
+          ? {
+            products: {
+              some: {
+                variantId: { in: Array.isArray(filters.variantId) ? filters.variantId : [filters.variantId] },
+              },
+            },
+          }
+          : {},
+        filters.productTypeId !== undefined
+          ? {
+            products: {
+              some: {
+                productTypeId: { in: Array.isArray(filters.productTypeId) ? filters.productTypeId : [filters.productTypeId] },
+              },
+            },
+          }
+          : {},
+      ],
+    };
+
+    const [categories, totalCount] = await Promise.all([
+      prisma.category.findMany({
+        where: whereClause,
         skip: offset,
         take: limit,
         include: {
           img: true,
           type: true,
           products: {
+            where: {
+              AND: [
+                filters.brandId !== undefined
+                  ? { brandId: { in: Array.isArray(filters.brandId) ? filters.brandId : [filters.brandId] } }
+                  : {},
+                filters.priceMin !== undefined ? { price: { gte: filters.priceMin } } : {},
+                filters.priceMax !== undefined ? { price: { lte: filters.priceMax } } : {},
+                filters.preorder !== undefined ? { preorder: filters.preorder } : {},
+                filters.setId !== undefined
+                  ? { setId: { in: Array.isArray(filters.setId) ? filters.setId : [filters.setId] } }
+                  : {},
+                filters.variantId !== undefined
+                  ? { variantId: { in: Array.isArray(filters.variantId) ? filters.variantId : [filters.variantId] } }
+                  : {},
+                filters.productTypeId !== undefined
+                  ? { productTypeId: { in: Array.isArray(filters.productTypeId) ? filters.productTypeId : [filters.productTypeId] } }
+                  : {},
+                filters.stockMin !== undefined ? { stock: { amount: { gte: filters.stockMin } } } : {},
+                filters.stockMax !== undefined ? { stock: { amount: { lte: filters.stockMax } } } : {},
+              ],
+            },
             include: {
               stock: true,
               type: true,
               img: true,
+              brand: true,
+              set: true,
+              variant: true,
+              rarity: true,
+              category: true
             },
           },
         },
       }),
       prisma.category.count({
-        where: search
-          ? {
-            name: {
-              contains: search,
-              mode: "insensitive",
-            },
-          }
-          : undefined,
+        where: whereClause,
       }),
     ]);
 
     return {
+      filters,
       categories,
       totalCount,
       totalPages: Math.ceil(totalCount / limit),
@@ -64,28 +174,154 @@ class CategoriesService {
     }
   }
 
-  public async getCategoryTypeById(id: string) {
-    return await prisma.categoryType.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        categories: true
-      }
-    })
-  }
+  public async getCategoryById(
+    id: string,
+    page: number = 1,
+    limit: number = 10,
+    filters?: {
+      brandId?: number[];
+      setId?: number[];
+      rarityId?: number[];
+      inStockOnly?: boolean;
+      outOfStockOnly?: boolean;
+      preorderOnly?: boolean;
+      priceMin?: number;
+      priceMax?: number;
+    }
+  ) {
+    const offset = (page - 1) * limit;
+    const categoryId = parseInt(id);
 
-  public async getCategoryById(id: string) {
-    return await prisma.category.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        type: true,
-        products: {
-          include: {
-            stock: true,
-          },
+    const productWhere: Prisma.ProductWhereInput = {
+      categoryId,
+      ...(filters?.brandId?.length && {
+        brandId: { in: filters.brandId },
+      }),
+      ...(filters?.setId?.length && {
+        setId: { in: filters.setId },
+      }),
+      ...(filters?.rarityId?.length && {
+        rarityId: { in: filters.rarityId },
+      }),
+      ...(filters?.priceMin !== undefined && filters?.priceMax !== undefined && {
+        price: {
+          gte: filters.priceMin,
+          lte: filters.priceMax,
         },
-        img: true,
-      },
-    });
+      }),
+      ...(filters?.priceMin !== undefined && filters?.priceMax === undefined && {
+        price: { gte: filters.priceMin },
+      }),
+      ...(filters?.priceMax !== undefined && filters?.priceMin === undefined && {
+        price: { lte: filters.priceMax },
+      }),
+    };
+
+    const inStock = filters?.inStockOnly === true;
+    const outOfStock = filters?.outOfStockOnly === true;
+    const preorder = filters?.preorderOnly === true;
+
+    if (inStock && outOfStock) {
+      productWhere.OR = [
+        { stock: { is: { amount: { gt: 0 } } } },
+        { stock: { is: { amount: 0 } } },
+      ];
+    } else if (inStock) {
+      productWhere.stock = {
+        is: { amount: { gt: 0 } },
+      };
+    } else if (outOfStock) {
+      productWhere.stock = {
+        is: { amount: 0 },
+      };
+    }
+
+    if (preorder) {
+      if (productWhere.stock?.is) {
+        productWhere.stock.is.preorder = true;
+      } else if (productWhere.stock) {
+        productWhere.stock.is = { preorder: true };
+      } else {
+        productWhere.stock = {
+          is: { preorder: true },
+        };
+      }
+    }
+
+    const [category, totalCount, brands, sets, rarities, hasInStock, hasPreorder, hasOutOfStock] = await Promise.all([
+      prisma.category.findUnique({
+        where: { id: categoryId },
+        include: {
+          type: true,
+          products: {
+            where: productWhere,
+            skip: offset,
+            take: limit,
+            include: {
+              stock: true,
+              img: true,
+              brand: true,
+              set: true,
+              variant: true,
+              cardType: true,
+              rarity: true,
+              category: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true,
+                  slug: true,
+                },
+              },
+            },
+          },
+          img: true,
+        },
+      }),
+      prisma.product.count({ where: productWhere }),
+      BrandsService.getBrandsByCategory(categoryId),
+      ProductSetsService.getSetsByCategory(categoryId),
+      RarityService.getRaritiesByCategory(categoryId),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { amount: { gt: 0 } } },
+        },
+      }),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { preorder: true } },
+        },
+      }),
+      prisma.product.count({
+        where: {
+          categoryId,
+          stock: { is: { amount: 0 } },
+        },
+      }),
+    ]);
+
+    if (!category || !category.products) {
+      throw new Error(`Category with ID ${id} not found or has no products`);
+    }
+
+    const stockStatus = {
+      hasInStock: hasInStock > 0,
+      hasPreorder: hasPreorder > 0,
+      hasOutOfStock: hasOutOfStock > 0,
+    };
+
+    return {
+      ...category,
+      brands,
+      sets,
+      rarities,
+      stockStatus,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+    };
   }
 
   public async getCategoryByName(name: string) {
@@ -102,6 +338,7 @@ class CategoriesService {
       },
     });
   }
+
   public async createCategory(
     name: string,
     description: string,
@@ -115,32 +352,30 @@ class CategoriesService {
       const normalizedType = name.toLowerCase();
 
       const existingCategory = await prisma.category.findFirst({
-        where: { name: normalizedName },
+        where: { name: { equals: normalizedName, mode: "insensitive" } },
       });
 
       if (existingCategory) {
         throw new Error("A category with this name already exists. Please choose a different name.");
       }
 
-      let categoryType = await prisma.categoryType.findFirst({
+      let categoryType = await prisma.categoryType.upsert({
         where: { name: normalizedType },
+        update: {},
+        create: { name: normalizedType },
       });
 
-      if (!categoryType) {
-        categoryType = await prisma.categoryType.create({
-          data: { name: normalizedType },
-        });
-      }
+      const slug = formatSlug(name);
 
       const category = await prisma.category.create({
         data: {
           name,
+          slug,
           description,
           categoryTypeId: categoryType.id,
         },
       });
 
-      let fileRecord = null;
       if (img) {
         const { createReadStream, filename, mimetype } = await img;
         const stream = createReadStream();
@@ -148,7 +383,7 @@ class CategoriesService {
         const { s3Url, key, fileName, contentType } =
           await UploadService.processUpload(stream, filename, mimetype);
 
-        fileRecord = await prisma.file.create({
+        const fileRecord = await prisma.file.create({
           data: {
             url: s3Url,
             key,
@@ -165,7 +400,7 @@ class CategoriesService {
 
       const fullCategory = await prisma.category.findUnique({
         where: { id: category.id },
-        include: { img: true, type: true },
+        include: { img: true, type: true, },
       });
 
       return fullCategory;
@@ -175,14 +410,10 @@ class CategoriesService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new Error(
-          "A category with this name already exists. Please choose a different name."
-        );
+        throw new Error("A category with this name already exists. Please choose a different name.");
       }
-      // throw new Error(`An unexpected error occurred: ${error.message}`);
     }
   }
-
 
   public async deleteCategory(id: string) {
     try {
@@ -267,10 +498,14 @@ class CategoriesService {
         throw new ApolloError("Category not found", "CATEGORY_NOT_FOUND");
       }
 
+      const updatedName = name ? name : existingCategory.name;
+      const updatedSlug = name ? formatSlug(name) : existingCategory.slug;
+
       await prisma.category.update({
         where: { id: parseInt(id) },
         data: {
-          name: name ? name : existingCategory.name,
+          name: updatedName,
+          slug: updatedSlug,
           description: description ? description : existingCategory.description,
           imgId: fileRecord?.id ?? existingCategory.imgId,
         },
@@ -299,6 +534,7 @@ class CategoriesService {
       );
     }
   }
+
 }
 
 export default new CategoriesService();

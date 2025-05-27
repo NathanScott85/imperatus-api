@@ -1,7 +1,6 @@
 import { gql } from "apollo-server";
 
 const productTypeDefs = gql`
-
 type Product {
     id: ID!
     category: Category!
@@ -12,18 +11,41 @@ type Product {
     rrp: Float
     description: String
     stock: Stock
-    sets: ProductSets!
+    set: ProductSets
+    slug: String
+    brand: ProductBrands!
     preorder: Boolean!
+    rarity: Rarity
+    variant: ProductVariant
+    cardType: CardType
+  }
+
+input ProductFilters {
+    brandId: [Int]
+    setId: [Int]
+    rarityId: [Int]
+    inStockOnly: Boolean
+    outOfStockOnly: Boolean
+    preorderOnly: Boolean
+    priceMin: Float
+    priceMax: Float
+}
+
+scalar Upload
+
+type File {
+    id: ID!
+    url: String!
+    key: String!
+    fileName: String!
+    contentType: String!
+    createdAt: String!
 }
 
 type ProductType {
     id: ID!
     name: String!
     products: [Product!]
-}
-
-input ProductTypeInput {
-    name: String!
 }
 
 type Stock {
@@ -37,6 +59,9 @@ type Stock {
 
 type PaginatedProducts {
     products: [Product!]!
+    brands: [ProductBrands!]!
+    sets: [ProductSets!]!
+    rarities: [Rarity!]!
     totalCount: Int!
     totalPages: Int!
     currentPage: Int!
@@ -49,40 +74,27 @@ type ProductBrands {
     img: File
 }
 
-type PaginatedBrands {
-    brands: [ProductBrands!]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int!
-}
-
-type PaginatedSets {
-    sets: [ProductSets]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int!
-}
-
-type ProductSets {
-    id: ID!
-    setName: String!
-    setCode: String!
-    description: String
-}
-
-type PaginatedTypes { 
-    types: [ProductType]!
-    totalCount: Int!
-    totalPages: Int!
-    currentPage: Int! 
-}
-
 type Query {
-    getAllProducts(page: Int, limit: Int): PaginatedProducts!
-    getAllProductTypes(page: Int, limit: Int, search: String): PaginatedTypes!
-    getAllBrands(page: Int, limit: Int, search: String): PaginatedBrands!
-    getAllSets(page: Int, limit: Int, search: String): PaginatedSets!
+    getAllProducts(
+      page: Int
+      limit: Int
+      search: String
+      filters: ProductFilters
+    ): PaginatedProducts!
     getProductById(id: ID!): Product
+    getLatestProducts: [Product!]!
+    getAllPreorders(
+      page: Int
+      limit: Int
+      search: String
+      filters: ProductFilters
+    ): PaginatedProducts!
+    getPreordersById(
+        id: ID!
+        page: Int
+        limit: Int
+        filters: ProductFilters
+    ): PaginatedProducts!
 }
 
 type Message {
@@ -98,20 +110,22 @@ input StockInput {
 }
 
 type Mutation {
-   createProductType(input: ProductTypeInput!): ProductType!
-   createProductBrand(name: String, description: String, img: Upload): ProductBrands
-   createProductSet(setName: String, setCode: String, description: String): ProductSets
    createProduct(
-        name: String!
-        price: Float!
-        productTypeId: Int
-        description: String
-        img: Upload
-        categoryId: Int
-        stock: StockInput
-        preorder: Boolean!
-        rrp: Float
-    ): Product
+    name: String!
+    price: Float!
+    productTypeId: Int!
+    cardTypeId: Int
+    brandId: Int!
+    setId: Int
+    description: String
+    img: Upload
+    categoryId: Int!
+    stock: StockInput!
+    preorder: Boolean!
+    rrp: Float
+    variantId: Int
+    rarityId: Int
+  ): Product!
     updateProduct(
         id: ID!
         name: String
@@ -127,12 +141,10 @@ type Mutation {
         stockPreorder: Boolean
         preorder: Boolean
         rrp: Float
+        variantId: Int
+        rarityIds: [Int]
     ): Product!
-    updateProductBrand(id: ID!, name: String!, description: String, img: Upload): ProductBrands!
-    updateProductSet(id: ID! setName: String!, setCode: String!, description: String): ProductSets!
     deleteProduct(id: ID!): Message!
-    deleteBrand(id: ID!): Message!
-    deleteSet(id: ID!): Message!
 }
 
 `;
