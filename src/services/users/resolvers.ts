@@ -22,6 +22,7 @@ import vatResolvers from "../vat/vatResolvers";
 import ordersResolvers from "../orders/ordersResolvers";
 import discountCodeResolvers from "../discount-codes/discountCodeResolvers";
 import paymentResolvers from "../payments/paymentResolvers";
+import settingsResolvers from "../settings/settingsResolver";
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -41,6 +42,7 @@ const resolvers = {
     ...vatResolvers.Query,
     ...discountCodeResolvers.Query,
     ...ordersResolvers.Query,
+    ...settingsResolvers.Query,
     getVerificationStatus: async (_: any, { userId }: any) => {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
@@ -96,6 +98,7 @@ const resolvers = {
     ...discountCodeResolvers.Mutation,
     ...ordersResolvers.Mutation,
     ...paymentResolvers.Mutation,
+    ...settingsResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {

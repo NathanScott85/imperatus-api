@@ -14,6 +14,7 @@ import ordersTypeDefs from "../orders/ordersTypeDefs";
 import discountCodesTypeDefs from "../discount-codes/discountcodeTypeDefs";
 import vatTypeDefs from "../vat/vatTypedefs";
 import paymentTypeDefs from "../payments/paymentTypedefs";
+import settingsTypedefs from "../settings/settingsTypedefs";
 
 const typeDefs = gql`
   type User {
@@ -172,6 +173,7 @@ const combinedTypeDefs = [
   discountCodesTypeDefs,
   vatTypeDefs,
   paymentTypeDefs,
+  settingsTypedefs,
 ];
 
 export default combinedTypeDefs;
