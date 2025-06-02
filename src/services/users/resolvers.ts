@@ -23,6 +23,7 @@ import ordersResolvers from "../orders/ordersResolvers";
 import discountCodeResolvers from "../discount-codes/discountCodeResolvers";
 import paymentResolvers from "../payments/paymentResolvers";
 import settingsResolvers from "../settings/settingsResolver";
+import ShippingResolvers from "../shipping/shippingResolvers";
 
 const resolvers = {
   Upload: GraphQLUpload,
@@ -43,6 +44,7 @@ const resolvers = {
     ...discountCodeResolvers.Query,
     ...ordersResolvers.Query,
     ...settingsResolvers.Query,
+    ...ShippingResolvers.Query,
     getVerificationStatus: async (_: any, { userId }: any) => {
       const verification = await UserService.getVerificationStatus(userId);
       return verification;
@@ -99,6 +101,7 @@ const resolvers = {
     ...ordersResolvers.Mutation,
     ...paymentResolvers.Mutation,
     ...settingsResolvers.Mutation,
+    ...ShippingResolvers.Mutation,
     async changeUserPassword(
       _: any,
       args: {
