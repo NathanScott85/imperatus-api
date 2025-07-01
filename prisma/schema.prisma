@@ -8,6 +8,27 @@ datasource db {
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
+model ShippingProvider {
+  id        Int              @id @default(autoincrement())
+  name      String
+  options   ShippingOption[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model ShippingOption {
+  id            Int              @id @default(autoincrement())
+  name          String
+  cost          Float
+  estimatedDays Int
+  description   String?
+  isActive      Boolean          @default(true)
+  providerId    Int
+  provider      ShippingProvider @relation(fields: [providerId], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
 model ApplicationSettings {
   id          Int     @id @default(1)
   comingSoon  Boolean @default(false)
